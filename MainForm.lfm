@@ -1,0 +1,362 @@
+object GreyDrawForm: TGreyDrawForm
+  Left = 80
+  Height = 805
+  Top = 107
+  Width = 1318
+  Caption = 'Untitled* – GreyDraw'
+  ClientHeight = 0
+  ClientWidth = 0
+  Color = clBtnFace
+  Font.Color = clWindowText
+  Font.Height = -13
+  Font.Name = 'Tahoma'
+  Menu = MainMenu1
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  LCLVersion = '1.1'
+  WindowState = wsMaximized
+  object ViewPort: TPaintBox
+    AnchorSideLeft.Control = ToolsPanel
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = ToolsPanel
+    AnchorSideRight.Control = PropsPanel
+    AnchorSideBottom.Control = ColorsPanel
+    Left = 121
+    Height = 621
+    Top = 48
+    Width = 923
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    OnMouseDown = ViewPortMouseDown
+    OnMouseMove = ViewPortMouseMove
+    OnMouseUp = ViewPortMouseUp
+    OnMouseWheel = ViewPortMouseWheel
+    OnPaint = ViewPortPaint
+    OnResize = ViewPortResize
+  end
+  object stub: TPanel
+    AnchorSideRight.Control = VScrollBar
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = HScrollBar
+    AnchorSideBottom.Side = asrBottom
+    Left = 1045
+    Height = 20
+    Top = 670
+    Width = 20
+    Anchors = [akRight, akBottom]
+    BevelOuter = bvNone
+    TabOrder = 6
+  end
+  object HScrollBar: TScrollBar
+    AnchorSideLeft.Control = ViewPort
+    AnchorSideTop.Control = ViewPort
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = ViewPort
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Side = asrBottom
+    Left = 121
+    Height = 21
+    Top = 669
+    Width = 923
+    Anchors = [akTop, akLeft, akRight]
+    PageSize = 100
+    TabOrder = 4
+    OnChange = HScrollBarChange
+  end
+  object PropsPanel: TPanel
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = ToolPropsPanel
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 1064
+    Height = 732
+    Top = 48
+    Width = 254
+    Anchors = [akTop, akRight, akBottom]
+    BorderSpacing.Left = 20
+    BevelOuter = bvNone
+    BorderStyle = bsSingle
+    ClientHeight = 728
+    ClientWidth = 250
+    TabOrder = 2
+    object PropPanel: TPanel
+      AnchorSideLeft.Control = PropsPanel
+      AnchorSideLeft.Side = asrCenter
+      AnchorSideTop.Control = PropsPanel
+      AnchorSideRight.Control = PropsPanel
+      AnchorSideRight.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 10
+      Height = 238
+      Top = 10
+      Width = 230
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      BorderSpacing.Left = 10
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 10
+      BevelInner = bvSpace
+      BevelOuter = bvSpace
+      BorderStyle = bsSingle
+      TabOrder = 0
+    end
+  end
+  object ToolPropsPanel: TPanel
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 0
+    Height = 48
+    Top = 0
+    Width = 1318
+    Anchors = [akTop, akLeft, akRight]
+    BevelOuter = bvNone
+    BorderStyle = bsSingle
+    ClientHeight = 44
+    ClientWidth = 1314
+    TabOrder = 0
+    object SMinusBtn: TSpeedButton
+      Left = 1280
+      Height = 22
+      Top = 11
+      Width = 23
+      Anchors = [akRight]
+      Caption = '-'
+      OnClick = SMinusBtnClick
+    end
+    object SPlusBtn: TSpeedButton
+      Left = 1213
+      Height = 22
+      Top = 11
+      Width = 23
+      Anchors = [akRight]
+      Caption = '+'
+      OnClick = SPlusBtnClick
+    end
+    object SNormalBtn: TSpeedButton
+      Left = 1238
+      Height = 22
+      Top = 11
+      Width = 40
+      Anchors = [akRight]
+      Caption = '100%'
+      OnClick = SNormalBtnClick
+    end
+  end
+  object ColorsPanel: TPanel
+    AnchorSideLeft.Control = ToolsPanel
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideRight.Control = VScrollBar
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 121
+    Height = 91
+    Top = 689
+    Width = 944
+    Anchors = [akLeft, akRight, akBottom]
+    BorderSpacing.Top = 20
+    BevelOuter = bvNone
+    BorderStyle = bsSingle
+    TabOrder = 3
+  end
+  object ToolsPanel: TPanel
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = ToolPropsPanel
+    AnchorSideTop.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 0
+    Height = 732
+    Top = 48
+    Width = 121
+    Anchors = [akTop, akLeft, akBottom]
+    BevelOuter = bvNone
+    BorderStyle = bsSingle
+    ClientHeight = 728
+    ClientWidth = 117
+    TabOrder = 1
+    object PenColorPanel: TPanel
+      Left = 44
+      Height = 50
+      Hint = 'Цвет контура'
+      Top = 664
+      Width = 50
+      Anchors = [akBottom]
+      BevelOuter = bvNone
+      BorderStyle = bsSingle
+      Color = clBlack
+      ParentColor = False
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 1
+      OnClick = PenColorPanelClick
+    end
+    object BrushColorPanel: TPanel
+      Left = 20
+      Height = 50
+      Hint = 'Цает заливки'
+      Top = 640
+      Width = 50
+      Anchors = [akBottom]
+      BevelOuter = bvNone
+      BorderStyle = bsSingle
+      Color = clWhite
+      ParentColor = False
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 0
+      OnClick = BrushColorPanelClick
+    end
+    object Shape1: TShape
+      AnchorSideLeft.Control = BrushColorPanel
+      AnchorSideTop.Side = asrBottom
+      AnchorSideBottom.Control = PenColorPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 20
+      Height = 15
+      Hint = 'Прозрачная заливка'
+      Top = 699
+      Width = 15
+      Anchors = [akLeft, akBottom]
+      ParentShowHint = False
+      Pen.Color = clSilver
+      ShowHint = True
+    end
+    object Shape2: TShape
+      AnchorSideTop.Control = BrushColorPanel
+      AnchorSideRight.Control = PenColorPanel
+      AnchorSideRight.Side = asrBottom
+      Left = 79
+      Height = 15
+      Hint = 'Прозрачный контур'
+      Top = 640
+      Width = 15
+      Anchors = [akTop, akRight]
+      ParentShowHint = False
+      Pen.Color = clSilver
+      ShowHint = True
+    end
+  end
+  object VScrollBar: TScrollBar
+    AnchorSideLeft.Control = ViewPort
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = ViewPort
+    AnchorSideBottom.Control = ViewPort
+    AnchorSideBottom.Side = asrBottom
+    Left = 1044
+    Height = 621
+    Top = 48
+    Width = 21
+    Anchors = [akTop, akLeft, akBottom]
+    Kind = sbVertical
+    LargeChange = 10
+    PageSize = 100
+    TabOrder = 5
+    OnChange = VScrollBarChange
+  end
+  object MainMenu1: TMainMenu
+    left = 8
+    top = 680
+    object FileMenu: TMenuItem
+      Caption = 'File'
+      object ExitItem: TMenuItem
+        Caption = 'Exit'
+        OnClick = ExitItemClick
+      end
+    end
+    object EditMenu: TMenuItem
+      Caption = 'Edit'
+    end
+    object HelpMenu: TMenuItem
+      Caption = 'Help'
+      object AboutItem: TMenuItem
+        Caption = 'About'
+        OnClick = AboutItemClick
+      end
+    end
+  end
+  object BgDlg: TColorDialog
+    Title = 'Выберите цвет'
+    Color = clBlack
+    CustomColors.Strings = (
+      'ColorA=000000'
+      'ColorB=000080'
+      'ColorC=008000'
+      'ColorD=008080'
+      'ColorE=800000'
+      'ColorF=800080'
+      'ColorG=808000'
+      'ColorH=808080'
+      'ColorI=C0C0C0'
+      'ColorJ=0000FF'
+      'ColorK=00FF00'
+      'ColorL=00FFFF'
+      'ColorM=FF0000'
+      'ColorN=FF00FF'
+      'ColorO=FFFF00'
+      'ColorP=FFFFFF'
+      'ColorQ=C0DCC0'
+      'ColorR=F0CAA6'
+      'ColorS=F0FBFF'
+      'ColorT=A4A0A0'
+    )
+    left = 33
+    top = 599
+  end
+  object BdDlg: TColorDialog
+    Title = 'Выберите цвет'
+    Color = clBlack
+    CustomColors.Strings = (
+      'ColorA=000000'
+      'ColorB=000080'
+      'ColorC=008000'
+      'ColorD=008080'
+      'ColorE=800000'
+      'ColorF=800080'
+      'ColorG=808000'
+      'ColorH=808080'
+      'ColorI=C0C0C0'
+      'ColorJ=0000FF'
+      'ColorK=00FF00'
+      'ColorL=00FFFF'
+      'ColorM=FF0000'
+      'ColorN=FF00FF'
+      'ColorO=FFFF00'
+      'ColorP=FFFFFF'
+      'ColorQ=C0DCC0'
+      'ColorR=F0CAA6'
+      'ColorS=F0FBFF'
+      'ColorT=A4A0A0'
+    )
+    left = 62
+    top = 623
+  end
+  object FormActionList: TActionList
+    left = 1200
+    top = 648
+    object EscapeAction: TAction
+      Caption = 'EscapeAction'
+      OnExecute = ActionExecute
+      ShortCut = 27
+    end
+    object PlusAction: TAction
+      Caption = 'PlusAction'
+      OnExecute = ActionExecute
+      ShortCut = 16491
+    end
+    object MinusAction: TAction
+      Caption = 'MinusAction'
+      OnExecute = ActionExecute
+      ShortCut = 16493
+    end
+    object NormalScaleAction: TAction
+      Caption = 'NormalScaleAction'
+      OnExecute = ActionExecute
+      ShortCut = 16480
+    end
+  end
+end
