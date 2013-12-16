@@ -1,7 +1,7 @@
 object GreyDrawForm: TGreyDrawForm
-  Left = 80
+  Left = 208
   Height = 805
-  Top = 107
+  Top = 182
   Width = 1318
   Caption = 'Untitled* – GreyDraw'
   ClientHeight = 0
@@ -13,7 +13,7 @@ object GreyDrawForm: TGreyDrawForm
   Menu = MainMenu1
   OnCreate = FormCreate
   Position = poScreenCenter
-  LCLVersion = '1.1'
+  LCLVersion = '1.2.0.1'
   WindowState = wsMaximized
   object ViewPort: TPaintBox
     AnchorSideLeft.Control = ToolsPanel
@@ -24,7 +24,7 @@ object GreyDrawForm: TGreyDrawForm
     Left = 121
     Height = 621
     Top = 48
-    Width = 923
+    Width = 922
     Align = alCustom
     Anchors = [akTop, akLeft, akRight, akBottom]
     OnMouseDown = ViewPortMouseDown
@@ -39,7 +39,7 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = HScrollBar
     AnchorSideBottom.Side = asrBottom
-    Left = 1045
+    Left = 1044
     Height = 20
     Top = 670
     Width = 20
@@ -57,7 +57,7 @@ object GreyDrawForm: TGreyDrawForm
     Left = 121
     Height = 21
     Top = 669
-    Width = 923
+    Width = 922
     Anchors = [akTop, akLeft, akRight]
     PageSize = 100
     TabOrder = 4
@@ -76,7 +76,7 @@ object GreyDrawForm: TGreyDrawForm
     Top = 48
     Width = 254
     Anchors = [akTop, akRight, akBottom]
-    BorderSpacing.Left = 20
+    BorderSpacing.Left = 21
     BevelOuter = bvNone
     BorderStyle = bsSingle
     ClientHeight = 728
@@ -156,7 +156,7 @@ object GreyDrawForm: TGreyDrawForm
     Left = 121
     Height = 91
     Top = 689
-    Width = 944
+    Width = 943
     Anchors = [akLeft, akRight, akBottom]
     BorderSpacing.Top = 20
     BevelOuter = bvNone
@@ -247,7 +247,7 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideTop.Control = ViewPort
     AnchorSideBottom.Control = ViewPort
     AnchorSideBottom.Side = asrBottom
-    Left = 1044
+    Left = 1043
     Height = 621
     Top = 48
     Width = 21
@@ -332,7 +332,7 @@ object GreyDrawForm: TGreyDrawForm
       'ColorS=F0FBFF'
       'ColorT=A4A0A0'
     )
-    left = 62
+    left = 56
     top = 623
   end
   object FormActionList: TActionList
@@ -358,5 +358,18 @@ object GreyDrawForm: TGreyDrawForm
       OnExecute = ActionExecute
       ShortCut = 16480
     end
+  end
+  object FODialog: TOpenDialog
+    Title = 'Открыть файл'
+    Filter = 'GreyDraw Image (*.gdr)|*.gdr|CryoDraw Image (*.cdr)|*.cdr'
+    left = 80
+    top = 648
+  end
+  object FSDialog: TSaveDialog
+    Title = 'Сохранить файл'
+    DefaultExt = '.gdr'
+    Filter = 'GreyDraw Image (*.gdr)|*.gdr|CryoDraw Image (*.cdr)|*.cdr'
+    left = 104
+    top = 672
   end
 end

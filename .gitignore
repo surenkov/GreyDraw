@@ -7,9 +7,6 @@
 .metadata
 bin/
 tmp/
-chm/
-backup/
-*/lib/
 *.tmp
 *.bak
 *.swp
@@ -52,6 +49,9 @@ x64/
 build/
 [Bb]in/
 [Oo]bj/
+chm/
+backup/
+*/lib/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -178,7 +178,10 @@ ehthumbs.db
 *.exe
 clear.bat
 
-
+*.ppu
+*.o
+*.compiled
+*.dbg
 
 # Folder config file
 Desktop.ini

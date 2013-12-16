@@ -6,8 +6,8 @@ interface
 
 uses
   SysUtils, Classes, Math, Graphics, Controls, Forms, Dialogs, ExtCtrls, Menus,
-  StdCtrls, Buttons, BGRABitmap, BGRABitmapTypes, Grids, Spin, ActnList,
-  Drawable, Transformations, Tools, typinfo, types, DrawComponents;
+  StdCtrls, Buttons, BGRABitmap, BGRABitmapTypes, Grids, Spin, ActnList, Properties,
+  RTTICtrls, Drawable, Transformations, Tools, typinfo, types, DrawComponents;
 
 type
 
@@ -17,32 +17,34 @@ type
     NormalScaleAction: TAction;
     MinusAction: TAction;
     EscapeAction: TAction;
+    FODialog: TOpenDialog;
     PlusAction: TAction;
     FormActionList: TActionList;
-    BgDlg: TColorDialog;
-    BdDlg: TColorDialog;
+    BgDlg:     TColorDialog;
+    BdDlg:     TColorDialog;
+    FSDialog: TSaveDialog;
     SMinusBtn: TSpeedButton;
-    SPlusBtn: TSpeedButton;
+    SPlusBtn:  TSpeedButton;
     SNormalBtn: TSpeedButton;
-    stub: TPanel;
+    stub:      TPanel;
     HScrollBar: TScrollBar;
     PropPanel: TPanel;
-    Shape1: TShape;
-    Shape2: TShape;
+    Shape1:    TShape;
+    Shape2:    TShape;
     VScrollBar: TScrollBar;
     ToolPropsPanel: TPanel;
     ToolsPanel: TPanel;
     PropsPanel: TPanel;
     ColorsPanel: TPanel;
     MainMenu1: TMainMenu;
-    FileMenu: TMenuItem;
-    EditMenu: TMenuItem;
-    HelpMenu: TMenuItem;
-    ExitItem: TMenuItem;
+    FileMenu:  TMenuItem;
+    EditMenu:  TMenuItem;
+    HelpMenu:  TMenuItem;
+    ExitItem:  TMenuItem;
     AboutItem: TMenuItem;
     BrushColorPanel: TPanel;
     PenColorPanel: TPanel;
-    ViewPort: TPaintBox;
+    ViewPort:  TPaintBox;
     procedure AboutItemClick(Sender: TObject);
     procedure ActionExecute(Sender: TObject);
     procedure BrushColorPanelClick(Sender: TObject);
@@ -55,12 +57,12 @@ type
     procedure ToolButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ViewPortMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: integer);
-    procedure ViewPortMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
+      Shift: TShiftState; X, Y: Integer);
+    procedure ViewPortMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure ViewPortMouseUp(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: integer);
+      Shift: TShiftState; X, Y: Integer);
     procedure ViewPortMouseWheel(Sender: TObject; Shift: TShiftState;
-      WheelDelta: integer; MousePos: TPoint; var Handled: boolean);
+      WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
     procedure ViewPortPaint(Sender: TObject);
     procedure ViewPortResize(Sender: TObject);
     procedure CreateToolButtons;
@@ -97,8 +99,8 @@ procedure TGreyDrawForm.BrushColorPanelClick(Sender: TObject);
 begin
   if BgDlg.Execute then
   begin
-    (CurrentFigure^ as TBrushFigure).BrushColor := BgDlg.Color;
     BrushColorPanel.Color := BgDlg.Color;
+    DrawProperty.SetBrushColor(BgDlg.Color);
     FigureClosed := True;
   end;
 end;
@@ -118,8 +120,8 @@ procedure TGreyDrawForm.PenColorPanelClick(Sender: TObject);
 begin
   if BdDlg.Execute then
   begin
-    (CurrentFigure^ as TPenFigure).PenColor := BdDlg.Color;
     PenColorPanel.Color := BdDlg.Color;
+    DrawProperty.SetPenColor(BdDlg.Color);
     FigureClosed := True;
   end;
 end;
@@ -153,14 +155,13 @@ end;
 
 procedure TGreyDrawForm.ToolButtonClick(Sender: TObject);
 var
-  i: integer;
+  i: Integer;
 begin
   FigureClosed := True;
   if CurrentTool <> (Sender as TToolButton).Tool then
   begin
     CurrentTool := (Sender as TToolButton).Tool;
-    for i := PropPanel.ControlCount - 1 downto 0 do
-      PropPanel.Controls[i].Free;
+    for i := PropPanel.ControlCount - 1 downto 0 do PropPanel.Controls[i].Free;
     CurrentTool.CreateControls(TWinControl(PropPanel));
   end;
 end;
@@ -169,15 +170,15 @@ procedure TGreyDrawForm.FormCreate(Sender: TObject);
 begin
   FirstBuffer := TBGRABitmap.Create(ClientWidth, ClientHeight, BGRAWhite);
   Self.CreateToolButtons;
-  ToolsPanel.Controls[4].OnClick(ToolsPanel.Controls[4]);
+  CurrentTool := TLineTool;
   Self.SetScrollRect;
-  ViewPortCenter := ScreenToWorld(ViewPort.Width div 2, ViewPort.Height div 2);
+  ViewPortCenter      := ScreenToWorld(ViewPort.Width div 2, ViewPort.Height div 2);
   Self.DoubleBuffered := True;
   PropPanel.DoubleBuffered := True;
 end;
 
 procedure TGreyDrawForm.ViewPortMouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
+  Shift: TShiftState; X, Y: Integer);
 begin
   BMouseDown := True;
   CurrentTool.MouseDown(X, Y, Shift);
@@ -185,7 +186,7 @@ begin
 end;
 
 procedure TGreyDrawForm.ViewPortMouseMove(Sender: TObject; Shift: TShiftState;
-  X, Y: integer);
+  X, Y: Integer);
 begin
   CursorPos.x := X;
   CursorPos.y := Y;
@@ -195,7 +196,7 @@ begin
 end;
 
 procedure TGreyDrawForm.ViewPortMouseUp(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
+  Shift: TShiftState; X, Y: Integer);
 begin
   BMouseDown := False;
   CurrentTool.MouseUp(X, Y, Shift);
@@ -203,11 +204,9 @@ begin
 end;
 
 procedure TGreyDrawForm.ViewPortMouseWheel(Sender: TObject; Shift: TShiftState;
-  WheelDelta: integer; MousePos: TPoint; var Handled: boolean);
+  WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 begin
-  if ssCtrl in Shift then
-    if WheelDelta > 0 then
-      Self.SPlusBtnClick(SPlusBtn)
+  if ssCtrl in Shift then if WheelDelta > 0 then Self.SPlusBtnClick(SPlusBtn)
     else
       Self.SMinusBtnClick(SMinusBtn)
   else if ssShift in Shift then
@@ -223,17 +222,20 @@ end;
 
 procedure TGreyDrawForm.ViewPortPaint(Sender: TObject);
 var
-  i: integer;
+  i: Integer;
 begin
   FirstBuffer.Fill(clWhite);
+  for i := 0 to High(FiguresList) do FiguresList[i].Draw(FirstBuffer);
   for i := 0 to High(FiguresList) do
-    FiguresList[i].Draw(FirstBuffer);
-  for i := 0 to High(FiguresList) do
-    if FiguresList[i].Hovered then
+    if FiguresList[i].Hovered or FiguresList[i].Selected then
       FiguresList[i].DrawSelection(FirstBuffer);
-  for i := 0 to High(FiguresList) do
-    if FiguresList[i].Selected then
-      FiguresList[i].DrawSelection(FirstBuffer);
+  for i := AnchorsList.Count - 1 downto 0 do
+    (AnchorsList.Items[i] as TPointAnchor).Draw(FirstBuffer);
+  with SelectionRect do
+  begin
+    FirstBuffer.PenStyle := psDash;
+    FirstBuffer.RectangleAntialias(Left, Top, Right, Bottom, SelectedColor, 1);
+  end;
   FirstBuffer.Draw(ViewPort.Canvas, 0, 0, True);
 end;
 
@@ -249,7 +251,7 @@ end;
 
 procedure TGreyDrawForm.CreateToolButtons;
 var
-  i: integer;
+  i:      Integer;
   Button: TToolButton;
 begin
   for i := 0 to High(FigureToolsList) do
@@ -257,32 +259,32 @@ begin
     Button := TToolButton.Create(ToolsPanel);
     with Button do
     begin
-      Parent := ToolsPanel;
-      Height := 30;
-      Width := 30;
-      Left := 15;
-      Top := i * Height + (i + 1) * Left;
-      Name := FigureToolsList[i].ClassName();
-      Glyph := LoadImage(FigureToolsList[i].Image);
-      Hint := FigureToolsList[i].Hint;
-      Tool := FigureToolsList[i];
+      Parent   := ToolsPanel;
+      Height   := 30;
+      Width    := 30;
+      Left     := 15;
+      Top      := i * Height + (i + 1) * Left;
+      Name     := FigureToolsList[i].ClassName();
+      Glyph    := LoadImage(FigureToolsList[i].Image);
+      Hint     := FigureToolsList[i].Hint;
+      Tool     := FigureToolsList[i];
       ShowHint := True;
       DoubleBuffered := True;
-      OnClick := @ToolButtonClick;
+      OnClick  := @ToolButtonClick;
     end;
   end;
 end;
 
 procedure TGreyDrawForm.SetScrollRect;
 var
-  i: integer;
+  i: Integer;
   CRect, Rect: TRectF;
 begin
   with Rect do
   begin
-    Left := 0;
-    Right := ViewPort.Width;
-    Top := 0;
+    Left   := 0;
+    Right  := ViewPort.Width;
+    Top    := 0;
     Bottom := ViewPort.Height;
   end;
   for i := 0 to High(FiguresList) do
@@ -290,9 +292,9 @@ begin
     CRect := FiguresList[i].Rect;
     with Rect do
     begin
-      Left := Min(Left, CRect.Left);
-      Right := Max(Right, CRect.Right);
-      Top := Min(Top, CRect.Top);
+      Left   := Min(Left, CRect.Left);
+      Right  := Max(Right, CRect.Right);
+      Top    := Min(Top, CRect.Top);
       Bottom := Max(Bottom, CRect.Bottom);
     end;
   end;
