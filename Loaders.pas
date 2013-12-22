@@ -5,111 +5,220 @@ unit Loaders;
 interface
 
 uses
-  Classes, SysUtils, Drawable, typinfo;
+  Classes, SysUtils, Drawable, typinfo, fpjson, fpjsonrtti, jsonparser, Dialogs;
 
 type
   TStringLoader = function(ASerialized: String): TFigure;
   TStringSaver = function(ADeserialized: TFigure): String;
+  TFileLoader = procedure(var AFileName: String);
+  TFileSaver = procedure(var AFileName: String);
 
-function GreyLoadFromString(ASerialized: String): TFigure;
-function GreySaveToString(ADeserialized: TFigure): String;
+  { TParserParam }
 
-function CryoLoadFromString(ASerialized: String): TFigure;
-function CryoSaveToString(ADeserialized: TFigure): String;
+  TParserParam = class
+    procedure GreyDraw(const AName: TJSONStringType; Item: TJSONData;
+      Data: TObject; var Continue: Boolean);
+    procedure CryoDraw(const AName: TJSONStringType; Item: TJSONData;
+      Data: TObject; var Continue: Boolean);
+  end;
+
+procedure GreyDrawLoadFromFile(var AFileName: String);
+procedure GreyDrawSaveToFile(var AFileName: String);
+function GreyDrawLoadFromString(ASerialized: String): TFigure;
+function GreyDrawSaveToString(ADeserialized: TFigure): String;
+function GreyDrawSaveToJSONData(ADeserialized: TFigure): TJSONObject;
+
+procedure CryoDrawLoadFromFile(var AFileName: String);
+procedure CryoDrawSaveToFile(var AFileName: String);
+function CryoDrawLoadFromString(ASerialized: String): TFigure;
+function CryoDrawSaveToString(ADeserialized: TFigure): String;
+
+const
+  CurrentGDFSign    = 'GDFImage';
+  CurrentGDFVersion = 1;
 
 var
-  FileName: String;
-
+  FileName:    String;
+  CurrentMode: String = CurrentGDFSign;
 
 implementation
 
-function GreyLoadFromString(ASerialized: String): TFigure;
-begin
-
-end;
-
-function GreySaveToString(ADeserialized: TFigure): String;
-begin
-
-end;
-
-function CryoLoadFromString(ASerialized: String): TFigure;
-
-  function GetStr(AKey: String; var AStr: String): String;
-  begin
-    Result := Copy(AStr, 1, Pos(AKey, AStr) - 1);
-    AStr   := Copy(AStr, Length(Result) + Length(AKey) + 1, Length(AStr) -
-      Length(Result) - Length(AKey));
-  end;
-
-  function GetNum(AKey: String; var AStr: String): Double;
-  begin
-    Result := StrToFloat(GetStr(AKey, AStr));
-  end;
+uses MainForm, Graphics, Properties;
 
 var
-  i:      Integer;
-  PrList: TPropList;
-  Ind:    Integer;
-  X, Y:   Double;
-  s:      String;
-  Flag:   Boolean = False;
+  Iterator: TParserParam;
+
+procedure GreyDrawLoadFromFile(var AFileName: String);
+var
+  Content: String = '';
+  CurrStr: String;
+  JObject: TJSONObject;
+  i:     Integer;
+  FFile: Text;
 begin
-  s    := Copy(ASerialized, 1, Pos('|||', ASerialized) - 1);
-  ASerialized := Copy(ASerialized, Length(s) + 4, Length(ASerialized) - Length(S) - 3);
-  for i := 0 to High(DrawObjectsClasses) do
-    if s = Copy(DrawObjectsClasses[i].ClassName, 1, Length(s)) then
-    begin
-      Result := DrawObjectsClasses[i].Create;
-      Flag   := True;
-      break;
-    end;
-  if not Flag or (GetStr('::', ASerialized) <> 'Points') then
+  if not FileExists(AFileName) then
+    exit;
+  AssignFile(FFile, AFileName);
+  Reset(FFile);
+  while not EOF(FFile) do
   begin
-    Result := nil;
-    exit;
+    ReadLn(FFile, CurrStr);
+    Content := Concat(Content, #13#10, CurrStr);
   end;
+  with TJSONParser.Create(Content) do
+    try
+      JObject := Parse as TJSONObject;
+    finally
+      Destroy;
+    end;
   try
-    Ind := round(GetNum('::', ASerialized));
-    for i := 0 to Ind - 1 do
-    begin
-      X := GetNum('|', ASerialized);
-      if i <> Ind - 1 then Y := GetNum('::', ASerialized)
-      else
-        Y := GetNum('|||', ASerialized);
-      Result.AddPoint(FloatPoint(X, Y));
-    end;
-    GetProps(Result.ClassType, PrList);
-    for i := 0 to High(PrList) do
-    begin
-      s := GetStr('::', ASerialized);
-      if IsPublishedProp(Result, s) then SetPropValue(Result, s, GetStr('|||', ASerialized));
-    end;
+    if JObject.Get('sign', 'BlahBlahBlah') = CurrentGDFSign then
+      JObject.Extract('sign')
+    else
+      raise Exception.Create('Файл поврежден или имеет неверный формат.');
+    if JObject.Get('version', -1) <= CurrentGDFVersion then
+      JObject.Extract('version')
+    else
+      raise Exception.Create('Формат файла несовместим с данной вресией редактора.');
   except
-    Result := nil;
-    exit;
+    on e: Exception do
+    begin
+      ShowMessage(e.Message);
+      JObject.Destroy;
+    end;
+  end;
+  SetLength(FiguresList, JObject.Count);
+  for i := 0 to JObject.Count - 1 do
+    FiguresList[i] := GreyDrawLoadFromString(JObject.Items[i].FormatJSON());
+  GreyDrawForm.ViewPort.Invalidate;
+  CloseFile(FFile);
+end;
+
+procedure GreyDrawSaveToFile(var AFileName: String);
+var
+  i:     Integer;
+  JRoot: TJSONObject;
+  FFile: Text;
+begin
+  if not FileExists(AFileName) then
+    FileClose(FileCreate(AFileName));
+  AssignFile(FFile, AFileName);
+  Rewrite(FFile);
+  JRoot := TJSONObject.Create;
+  JRoot.Add('sign', CurrentGDFSign);
+  JRoot.Add('version', CurrentGDFVersion);
+  for i := 0 to High(FiguresList) do
+    JRoot.Add(FiguresList[i].CreateUUID, GreyDrawSaveToJSONData(FiguresList[i]));
+  Write(FFile, JRoot.FormatJSON());
+  JRoot.Destroy;
+  CloseFile(FFile);
+end;
+
+function GreyDrawLoadFromString(ASerialized: String): TFigure;
+var
+  JObject: TJSONObject;
+  ObjType: String;
+begin
+  with TJSONParser.Create(ASerialized) do
+    try
+      JObject := Parse as TJSONObject;
+    finally
+      Destroy;
+    end;
+  try
+    Result := GetClass(String(JObject.Extract('Type').Value)).Create as TFigure;
+    JObject.Iterate(@Iterator.GreyDraw, Result);
+  except
+    ShowMessage('Файл поврежден или имеет неверный формат.');
+    JObject.Destroy;
   end;
 end;
 
-function CryoSaveToString(ADeserialized: TFigure): String;
+function GreyDrawSaveToString(ADeserialized: TFigure): String;
+begin
+  with GreyDrawSaveToJSONData(ADeserialized) do
+    try
+      Result := FormatJSON();
+    finally
+      Destroy;
+    end;
+end;
+
+function GreyDrawSaveToJSONData(ADeserialized: TFigure): TJSONObject;
 var
   i: Integer;
-  PropList: TPropList;
-  s: String;
+  JPoints, JPoint: TJSONArray;
 begin
-  Result := TClass(ADeserialized.ClassType).ClassName + '|||';
+  with TJSONStreamer.Create(nil) do
+    try
+      Result  := ObjectToJSON(ADeserialized);
+      JPoints := TJSONArray.Create;
+      for i := 0 to ADeserialized.PointsCount do
+      begin
+        JPoint := TJSONArray.Create;
+        JPoint.Add(ADeserialized.GetPoint(i).x);
+        JPoint.Add(ADeserialized.GetPoint(i).y);
+        JPoints.Add(JPoint);
+      end;
+      Result.Add('Type', ADeserialized.ClassName);
+      Result.Add('Points', JPoints);
+    finally
+      Destroy;
+    end;
+end;
 
-  Result += 'Points::' + IntToStr(ADeserialized.PointsCount + 1) + '::';
-  for i := 0 to ADeserialized.PointsCount do
-    Result += FloatToStr(ADeserialized.X) + '|' +
-      FloatToStr(ADeserialized.Point[i].Y) + '::';
-  Result   := Copy(Result, 1, Length(Result) - 2) + '|||';
-  for i := GetPropList(ADeserialized.ClassType, @PropList) downto 0 do
-  begin
-    Result += PropList[i]^.Name + '::';
-    s      := GetPropValue(ADeserialized, PropList[i]^.Name);
-    Result += s + '|||';
+procedure CryoDrawLoadFromFile(var AFileName: String);
+begin
+
+end;
+
+procedure CryoDrawSaveToFile(var AFileName: String);
+begin
+
+end;
+
+function CryoDrawLoadFromString(ASerialized: String): TFigure;
+begin
+
+end;
+
+function CryoDrawSaveToString(ADeserialized: TFigure): String;
+begin
+
+end;
+
+{ TParserParam }
+
+procedure TParserParam.GreyDraw(const AName: TJSONStringType;
+  Item: TJSONData; Data: TObject; var Continue: Boolean);
+var
+  i: Integer;
+begin
+  case AName of
+    'Points':
+      for i := 0 to Item.Count - 1 do
+        try
+          (Data as TFigure).AddPoint(Double(Item.Items[i].Items[0].Value),
+            Double(Item.Items[i].Items[1].Value));
+        except
+          ShowMessage('Формат изображения поврежден или неверен.');
+        end;
+    else
+      if IsPublishedProp(Data, AName) then
+        SetPropValue(Data, AName, Item.Value)
   end;
 end;
+
+procedure TParserParam.CryoDraw(const AName: TJSONStringType;
+  Item: TJSONData; Data: TObject; var Continue: Boolean);
+begin
+
+end;
+
+initialization
+  Iterator := TParserParam.Create;
+
+finalization
+  Iterator.Destroy;
 
 end.

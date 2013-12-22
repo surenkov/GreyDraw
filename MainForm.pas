@@ -6,24 +6,31 @@ interface
 
 uses
   SysUtils, Classes, Math, Graphics, Controls, Forms, Dialogs, ExtCtrls, Menus,
-  StdCtrls, Buttons, BGRABitmap, BGRABitmapTypes, Grids, Spin, ActnList, Properties,
-  RTTICtrls, Drawable, Transformations, Tools, typinfo, types, DrawComponents;
+  StdCtrls, Buttons, BGRABitmap, BGRABitmapTypes, Grids, Spin, ActnList,
+  Properties, Drawable, Transformations, Tools, typinfo, types, DrawComponents,
+  Loaders, FileUtil, uPSComponent;
 
 type
-
   { TGreyDrawForm }
 
   TGreyDrawForm = class(TForm)
+    MenuItem1: TMenuItem;
+    SaveItem: TMenuItem;
+    OpenItem: TMenuItem;
+    NewItem: TMenuItem;
     NormalScaleAction: TAction;
     MinusAction: TAction;
     EscapeAction: TAction;
-    FODialog: TOpenDialog;
+    FODialog:  TOpenDialog;
     PlusAction: TAction;
     FormActionList: TActionList;
     BgDlg:     TColorDialog;
     BdDlg:     TColorDialog;
-    FSDialog: TSaveDialog;
+    FSDialog:  TSaveDialog;
     SMinusBtn: TSpeedButton;
+    NewFileButton: TSpeedButton;
+    OpenFileButton: TSpeedButton;
+    SaveFileButton: TSpeedButton;
     SPlusBtn:  TSpeedButton;
     SNormalBtn: TSpeedButton;
     stub:      TPanel;
@@ -50,7 +57,9 @@ type
     procedure BrushColorPanelClick(Sender: TObject);
     procedure ExitItemClick(Sender: TObject);
     procedure HScrollBarChange(Sender: TObject);
+    procedure OpenFileButtonClick(Sender: TObject);
     procedure PenColorPanelClick(Sender: TObject);
+    procedure SaveFileButtonClick(Sender: TObject);
     procedure SMinusBtnClick(Sender: TObject);
     procedure SNormalBtnClick(Sender: TObject);
     procedure SPlusBtnClick(Sender: TObject);
@@ -73,6 +82,9 @@ type
 var
   GreyDrawForm: TGreyDrawForm;
   FirstBuffer, SecondBuffer: TBGRABitmap;
+  OpenedFile: string;
+  FileLoader: TFileLoader;
+  FileSaver: TFileSaver;
 
 implementation
 
@@ -116,6 +128,27 @@ begin
   ViewPort.Invalidate;
 end;
 
+procedure TGreyDrawForm.OpenFileButtonClick(Sender: TObject);
+var
+  FFile: Text;
+begin
+  if FODialog.Execute then
+  begin
+    OpenedFile:= FODialog.FileName;
+    if not FileExists(OpenedFile) then
+      raise EInOutError.Create('Файл не найден.');
+    AssignFile(FFile, FODialog.FileName);
+    Reset(FFile);
+    ReadLn(FFile, CurrentMode);
+    case CurrentMode of
+      'CryoDraw vector image ver.3': FileLoader := @CryoDrawLoadFromFile;
+      else FileLoader := @GreyDrawLoadFromFile;
+    end;
+    CloseFile(FFile);
+    FileLoader(OpenedFile);
+  end;
+end;
+
 procedure TGreyDrawForm.PenColorPanelClick(Sender: TObject);
 begin
   if BdDlg.Execute then
@@ -123,6 +156,19 @@ begin
     PenColorPanel.Color := BdDlg.Color;
     DrawProperty.SetPenColor(BdDlg.Color);
     FigureClosed := True;
+  end;
+end;
+
+procedure TGreyDrawForm.SaveFileButtonClick(Sender: TObject);
+begin
+  if FSDialog.Execute then
+  begin
+    OpenedFile:=FSDialog.FileName;
+    case FSDialog.FilterIndex of
+      1: FileSaver := @GreyDrawSaveToFile;
+      2: FileSaver := @CryoDrawSaveToFile;
+    end;
+    FileSaver(OpenedFile);
   end;
 end;
 
@@ -161,7 +207,8 @@ begin
   if CurrentTool <> (Sender as TToolButton).Tool then
   begin
     CurrentTool := (Sender as TToolButton).Tool;
-    for i := PropPanel.ControlCount - 1 downto 0 do PropPanel.Controls[i].Free;
+    for i := PropPanel.ControlCount - 1 downto 0 do
+      PropPanel.Controls[i].Free;
     CurrentTool.CreateControls(TWinControl(PropPanel));
   end;
 end;
@@ -206,7 +253,9 @@ end;
 procedure TGreyDrawForm.ViewPortMouseWheel(Sender: TObject; Shift: TShiftState;
   WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 begin
-  if ssCtrl in Shift then if WheelDelta > 0 then Self.SPlusBtnClick(SPlusBtn)
+  if ssCtrl in Shift then
+    if WheelDelta > 0 then
+      Self.SPlusBtnClick(SPlusBtn)
     else
       Self.SMinusBtnClick(SMinusBtn)
   else if ssShift in Shift then
@@ -225,7 +274,8 @@ var
   i: Integer;
 begin
   FirstBuffer.Fill(clWhite);
-  for i := 0 to High(FiguresList) do FiguresList[i].Draw(FirstBuffer);
+  for i := 0 to High(FiguresList) do
+    FiguresList[i].Draw(FirstBuffer);
   for i := 0 to High(FiguresList) do
     if FiguresList[i].Hovered or FiguresList[i].Selected then
       FiguresList[i].DrawSelection(FirstBuffer);

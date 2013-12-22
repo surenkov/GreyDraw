@@ -137,7 +137,7 @@ begin
   begin
     MinValue := 1;
     MaxValue := 300;
-    Value    := 1;
+    Value    := round(GPenSize);
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
@@ -156,7 +156,7 @@ begin
   begin
     MinValue := 3;
     MaxValue := 255;
-    Value    := 3;
+    Value    := GAngleCount;
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
@@ -175,7 +175,7 @@ begin
   begin
     MinValue := 1;
     MaxValue := 100;
-    Value    := 5;
+    Value    := GRoundX;
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
@@ -189,7 +189,7 @@ begin
   begin
     MinValue := 1;
     MaxValue := 100;
-    Value    := 5;
+    Value    := GRoundY;
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
@@ -223,7 +223,7 @@ begin
   GPenStyle := PenStyles[(Sender as TComboBox).ItemIndex + 1];
   for i := High(FiguresList) downto 0 do
     if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'PenStyle') then
-      SetPropValue(CurrentFigure^, 'PenStyle', GPenStyle);
+      SetPropValue(FiguresList[i], 'PenStyle', GPenStyle);
   GreyDrawForm.ViewPort.Invalidate;
 end;
 
@@ -273,7 +273,7 @@ begin
   GRoundX := (Sender as TSpinEdit).Value;
   for i := High(FiguresList) downto 0 do
     if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'RX') then
-      SetPropValue(CurrentFigure^, 'RX', GRoundX);
+      SetPropValue(FiguresList[i], 'RX', GRoundX);
   GreyDrawForm.ViewPort.Invalidate;
 end;
 

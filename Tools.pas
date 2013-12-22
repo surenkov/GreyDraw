@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Drawable, Graphics, Transformations, typinfo, Math,
   BGRABitmap, BGRABitmapTypes, Properties, Controls, StdCtrls, Forms, Dialogs,
-  LCLIntf, LCLType;
+  LCLIntf, LCLType, Loaders, FileUtil;
 
 type
 
@@ -118,9 +118,9 @@ type
     class function Hint: String; override;
   end;
 
-  { TRightPolygonTool }
+  { TRegularPolygonTool }
 
-  TRightPolygonTool = class(TBrushFigureTool)
+  TRegularPolygonTool = class(TBrushFigureTool)
     class procedure CreateControls(var AOwner: TWinControl); override;
     class procedure MouseDown(X, Y: Integer; Shift: TShiftState); override;
     class procedure MouseMove(X, Y: Integer; Shift: TShiftState); override;
@@ -339,15 +339,15 @@ begin
   Result := 'Текст';
 end;
 
-{ TRightPolygonTool }
+{ TRegularPolygonTool }
 
-class procedure TRightPolygonTool.CreateControls(var AOwner: TWinControl);
+class procedure TRegularPolygonTool.CreateControls(var AOwner: TWinControl);
 begin
   inherited CreateControls(AOwner);
   DrawProperty.CreateAngleSpinBox(AOwner);
 end;
 
-class procedure TRightPolygonTool.MouseDown(X, Y: Integer; Shift: TShiftState);
+class procedure TRegularPolygonTool.MouseDown(X, Y: Integer; Shift: TShiftState);
 begin
   Self.CreateFigure;
   inherited MouseDown(X, Y, Shift);
@@ -355,26 +355,25 @@ begin
   CurrentFigure^.AddPoint(X + 1, Y + 1);
 end;
 
-class procedure TRightPolygonTool.MouseMove(X, Y: Integer; Shift: TShiftState);
+class procedure TRegularPolygonTool.MouseMove(X, Y: Integer; Shift: TShiftState);
 begin
   if BMouseDown then
     CurrentFigure^.ChangePoint(ScreenToWorld(X, Y));
 end;
 
-class procedure TRightPolygonTool.CreateFigure;
+class procedure TRegularPolygonTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
   CurrentFigure  := @FiguresList[High(FiguresList)];
-  CurrentFigure^ := TRightPolygon.Create;
-  (CurrentFigure^ as TRightPolygon).AngleCount := 3;
+  CurrentFigure^ := TRegularPolygon.Create;
 end;
 
-class function TRightPolygonTool.Image: String;
+class function TRegularPolygonTool.Image: String;
 begin
   Result := 'rightpoly.png';
 end;
 
-class function TRightPolygonTool.Hint: String;
+class function TRegularPolygonTool.Hint: String;
 begin
   Result := 'Правильный многоугольник';
 end;
@@ -442,6 +441,7 @@ var
   i, j:  Integer;
   P, SP: TPointF;
   R:     HRGN;
+  A:     TCollectionItem;
   sel:   Boolean = False;
 begin
   if BMouseDown then
@@ -475,6 +475,14 @@ begin
           DeleteObject(R);
         end;
       end;
+      AnchorsList.Clear;
+      for i := High(FiguresList) downto 0 do
+        if FiguresList[i].Selected then
+          for j := 0 to FiguresList[i].PointsCount do
+          begin
+            A := AnchorsList.Add;
+            (A as TPointAnchor).SetPoint(FiguresList[i].GetPointAddr(j));
+          end;
     end;
   end
   else
@@ -502,7 +510,7 @@ class procedure TSelectFigureTool.MouseUp(X, Y: Integer; Shift: TShiftState);
 
   function GetLeastCommonClass(AFClass, ASClass: TClass): TClass;
   begin
-    if (AFClass = ASClass) or ASClass.InheritsFrom(AFClass) then
+    if ASClass.InheritsFrom(AFClass) then
       exit(AFClass)
     else if AFClass.InheritsFrom(ASClass) then
       exit(ASClass)
@@ -513,7 +521,6 @@ class procedure TSelectFigureTool.MouseUp(X, Y: Integer; Shift: TShiftState);
 var
   i:   Integer;
   lcc: TClass = nil;
-  classname1: String;
 begin
   for i := 0 to High(FiguresList) do
     if FiguresList[i].Selected then
@@ -531,7 +538,8 @@ begin
   if lcc <> nil then
   begin
     GreyDrawForm.PropPanel.Caption := lcc.ClassName;
-    TTool(GetClass(Concat(lcc.ClassName, 'Tool'))).CreateControls(TWinControl(GreyDrawForm.PropPanel));
+    TToolClass(GetClass(Concat(lcc.ClassName, 'Tool'))).CreateControls(
+      TWinControl(GreyDrawForm.PropPanel));
   end;
   DeltaP := PointF(0, 0);
   with SelectionRect do
@@ -907,10 +915,12 @@ end;
 
 class procedure TTool.MouseMove(X, Y: Integer; Shift: TShiftState);
 begin
+
 end;
 
 class procedure TTool.MouseUp(X, Y: Integer; Shift: TShiftState);
 begin
+
 end;
 
 initialization
@@ -918,7 +928,7 @@ initialization
   RegisterTool(TPolylineTool);
   RegisterTool(TBezierTool);
   RegisterTool(TPolygonTool);
-  RegisterTool(TRightPolygonTool);
+  RegisterTool(TRegularPolygonTool);
   RegisterTool(TRectangleTool);
   RegisterTool(TRoundRectTool);
   RegisterTool(TEllipseTool);

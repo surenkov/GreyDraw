@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Math, Types, Graphics, Transformations, typinfo,
-  BGRABitmap, BGRABitmapTypes, LCLIntf, LCLType;
+  BGRABitmap, BGRABitmapTypes, LCLIntf, LCLType, Dialogs;
 
 type
 
@@ -17,6 +17,7 @@ type
   TFigure = class(TPersistent)
   private
     FPoints: TPointFList;
+    FStringPoints: String;
   public
     Selected, Hovered: Boolean;
     constructor Create; virtual; abstract;
@@ -37,6 +38,7 @@ type
     function GetPointAddr(APos: Integer = -1): PPointF;
     procedure GetPointAddr(var APoint: PPoint; APos: Integer = -1);
     function PointsCount: Integer;
+    function CreateUUID: String;
   end;
 
   PFigure = ^TFigure;
@@ -163,13 +165,14 @@ type
     function Region: HRGN; override;
   end;
 
-  { TRightPolygon }
+  { TRegularPolygon }
 
-  TRightPolygon = class(TBrushFigure)
+  TRegularPolygon = class(TBrushFigure)
   private
     FAngleCount: Integer;
     function CreatePoints: TPointFList;
   public
+    constructor Create; override;
     function Rect: TRectF; override;
     procedure Draw(var ACanvas: TBGRABitmap); override;
     procedure DrawSelection(var ACanvas: TBGRABitmap); override;
@@ -223,7 +226,7 @@ var
   BMouseDown:  Boolean;
 
   // Property variables
-  GPenColor:   TBGRAPixel = (blue: 0; green: 0; red: 0; alpha: 255);
+  GPenColor: TBGRAPixel = (blue: 0; green: 0; red: 0; alpha: 255);
   GBrushColor: TBGRAPixel = (blue: 255; green: 255; red: 255; alpha: 255);
   GBrushStyle: TBrushStyle = bsSolid;
   GPenStyle:   TPenStyle = psSolid;
@@ -234,7 +237,7 @@ var
   GFontName:   String = 'Arial';
   GFontSize:   Integer = 10;
   GFontHorisontalAlignment: TAlignment = taLeftJustify;
-  GFontVerticalAlignment: TTextLayout  = tlTop;
+  GFontVerticalAlignment: TTextLayout = tlTop;
 
 implementation
 
@@ -304,13 +307,14 @@ begin
   ACanvas.PenStyle := psSolid;
   ACanvas.RectangleAntialias(P.x - EpsilonPoint, P.y - EpsilonPoint,
     P.x + EpsilonPoint, P.y + EpsilonPoint, SelectedColor, 1, BGRAWhite);
-  if Selected then ACanvas.FillRectAntialias(P.x - EpsilonPoint, P.y - EpsilonPoint,
+  if Selected then
+    ACanvas.FillRectAntialias(P.x - EpsilonPoint, P.y - EpsilonPoint,
       P.x + EpsilonPoint, P.y + EpsilonPoint, SelectedColor);
 end;
 
-{ TRightPolygon }
+{ TRegularPolygon }
 
-function TRightPolygon.Rect: TRectF;
+function TRegularPolygon.Rect: TRectF;
 var
   P: TPointFList;
   r: Double;
@@ -318,7 +322,8 @@ var
 begin
   r := sqrt((FPoints[1].x - FPoints[0].x) * (FPoints[1].x - FPoints[0].x) +
     (Fpoints[1].y - FPoints[0].y) * (Fpoints[1].y - FPoints[0].y));
-  if r = 0 then exit;
+  if r = 0 then
+    exit;
   P := WorldToScreen(Self.CreatePoints);
   with Result do
   begin
@@ -336,13 +341,14 @@ begin
   end;
 end;
 
-procedure TRightPolygon.Draw(var ACanvas: TBGRABitmap);
+procedure TRegularPolygon.Draw(var ACanvas: TBGRABitmap);
 var
   P: TPointFList;
 begin
   inherited Draw(ACanvas);
   if sqrt((FPoints[1].x - FPoints[0].x) * (FPoints[1].x - FPoints[0].x) +
-    (Fpoints[1].y - FPoints[0].y) * (Fpoints[1].y - FPoints[0].y)) > 0 then try
+    (Fpoints[1].y - FPoints[0].y) * (Fpoints[1].y - FPoints[0].y)) > 0 then
+    try
       P := WorldToScreen(Self.CreatePoints);
       ACanvas.FillPolyAntialias(P, Texture);
       ACanvas.DrawPolygonAntialias(P, FPenColor, FPenSize * Scaling);
@@ -351,7 +357,7 @@ begin
     end;
 end;
 
-procedure TRightPolygon.DrawSelection(var ACanvas: TBGRABitmap);
+procedure TRegularPolygon.DrawSelection(var ACanvas: TBGRABitmap);
 var
   P: TPointFList;
   R: TRect;
@@ -367,7 +373,7 @@ begin
   end;
 end;
 
-function TRightPolygon.Region: HRGN;
+function TRegularPolygon.Region: HRGN;
 var
   P: TPointList;
 begin
@@ -379,7 +385,7 @@ begin
   Result := CreatePolygonRgn(@P[0], Length(P), WINDING);
 end;
 
-function TRightPolygon.CreatePoints: TPointFList;
+function TRegularPolygon.CreatePoints: TPointFList;
 var
   x, y, r, angle: Double;
   i: Integer;
@@ -396,6 +402,12 @@ begin
     Result[i].x := r * cos(angle) + FPoints[0].x;
     Result[i].y := r * sin(angle) + FPoints[0].y;
   end;
+end;
+
+constructor TRegularPolygon.Create;
+begin
+  inherited Create;
+  FAngleCount := GAngleCount;
 end;
 
 { TTextFigure }
@@ -578,7 +590,8 @@ procedure TFigure.AddPoint(X, Y: Integer; APos: Integer);
 var
   i: Integer;
 begin
-  if APos > High(FPoints) then SetLength(FPoints, APos + 1)
+  if APos > High(FPoints) then
+    SetLength(FPoints, APos + 1)
   else if APos < 0 then
   begin
     SetLength(FPoints, Length(FPoints) + 1);
@@ -589,7 +602,8 @@ begin
     if (FPoints[APos].X <> 0) and (FPoints[APos].Y <> 0) then
     begin
       SetLength(FPoints, Length(FPoints) + 1);
-      for i := High(FPoints) downto APos + 1 do FPoints[i] := FPoints[i - 1];
+      for i := High(FPoints) downto APos + 1 do
+        FPoints[i] := FPoints[i - 1];
     end;
   end;
   FPoints[APos] := ScreenToWorld(X, Y);
@@ -613,7 +627,8 @@ procedure TFigure.AddPoint(APoint: TPointF; APos: Integer);
 var
   i: Integer;
 begin
-  if APos > High(FPoints) then SetLength(FPoints, APos + 1)
+  if APos > High(FPoints) then
+    SetLength(FPoints, APos + 1)
   else if APos < 0 then
   begin
     SetLength(FPoints, Length(FPoints) + 1);
@@ -624,7 +639,8 @@ begin
     if (FPoints[APos].X <> 0) and (FPoints[APos].Y <> 0) then
     begin
       SetLength(FPoints, Length(FPoints) + 1);
-      for i := High(FPoints) downto APos + 1 do FPoints[i] := FPoints[i - 1];
+      for i := High(FPoints) downto APos + 1 do
+        FPoints[i] := FPoints[i - 1];
     end;
   end;
   FPoints[APos] := APoint;
@@ -634,10 +650,12 @@ procedure TFigure.RemovePoint(APos: Integer);
 var
   i: Integer;
 begin
-  if (APos < 0) or (APos > High(FPoints)) then APos := High(FPoints)
+  if (APos < 0) or (APos > High(FPoints)) then
+    APos := High(FPoints)
   else
   begin
-    for i := APos to High(FPoints) - 1 do FPoints[i] := FPoints[i + 1];
+    for i := APos to High(FPoints) - 1 do
+      FPoints[i] := FPoints[i + 1];
     SetLength(FPoints, Length(FPoints) - 1);
   end;
 end;
@@ -653,31 +671,46 @@ end;
 
 procedure TFigure.ChangePoint(APoint: TPointF; APos: Integer);
 begin
-  if (APos < 0) or (APos > High(FPoints)) then APos := High(FPoints);
+  if (APos < 0) or (APos > High(FPoints)) then
+    APos := High(FPoints);
   FPoints[APos] := APoint;
 end;
 
 function TFigure.GetPoint(APos: Integer): TPointF;
 begin
-  if (APos < 0) or (APos > High(FPoints)) then APos := High(FPoints);
+  if (APos < 0) or (APos > High(FPoints)) then
+    APos := High(FPoints);
   Result := FPoints[APos];
 end;
 
 procedure TFigure.GetPointAddr(var APoint: PPoint; APos: Integer);
 begin
-  if (APos < 0) or (APos > High(FPoints)) then APos := High(FPoints);
+  if (APos < 0) or (APos > High(FPoints)) then
+    APos := High(FPoints);
   APoint := @FPoints[APos];
 end;
 
 function TFigure.GetPointAddr(APos: Integer): PPointF;
 begin
-  if (APos < 0) or (APos > High(FPoints)) then APos := High(FPoints);
+  if (APos < 0) or (APos > High(FPoints)) then
+    APos := High(FPoints);
   Result := @FPoints[APos];
 end;
 
 function TFigure.PointsCount: Integer;
 begin
   Result := High(FPoints);
+end;
+
+function TFigure.CreateUUID: String;
+var
+  AGUID: TGuid;
+begin
+  if CreateGUID(AGUID) <> 0 then
+    raise Exception.Create('GUID creation failed')
+  else
+    Result := GUIDToString(AGUID);
+  Result   := Copy(Result, 2, Length(Result) - 2);
 end;
 
 { TPolyline }
@@ -981,4 +1014,17 @@ end;
 
 initialization
   AnchorsList := TCollection.Create(TPointAnchor);
+  RegisterClass(TFigure);
+  RegisterClass(TPenFigure);
+  RegisterClass(TBrushFigure);
+  RegisterClass(TTextFigure);
+  RegisterClass(TLine);
+  RegisterClass(TBezier);
+  RegisterClass(TPolyline);
+  RegisterClass(TPolygon);
+  RegisterClass(TRegularPolygon);
+  RegisterClass(TEllipse);
+  RegisterClass(TRectangle);
+  RegisterClass(TRoundRect);
+
 end.
