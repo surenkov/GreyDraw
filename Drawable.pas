@@ -7,8 +7,8 @@ unit Drawable;
 interface
 
 uses
-  Classes, SysUtils, Forms, Math, Types, Graphics, Transformations, typinfo,
-  BGRABitmap, BGRABitmapTypes, LCLIntf, LCLType, Dialogs;
+  Classes, SysUtils, Forms, Math, Types, Graphics, Dialogs, LCLIntf, LCLType,
+  typinfo, BGRABitmap, BGRABitmapTypes, Transformations, Utils;
 
 type
 
@@ -20,7 +20,6 @@ type
     FStringPoints: String;
   public
     Selected, Hovered: Boolean;
-    constructor Create; virtual; abstract;
     procedure Draw(var ACanvas: TBGRABitmap); virtual; abstract;
     procedure DrawSelection(var ACanvas: TBGRABitmap); virtual; abstract;
     procedure Clear; virtual;
@@ -37,7 +36,7 @@ type
     function GetPoint(APos: Integer = -1): TPointF;
     function GetPointAddr(APos: Integer = -1): PPointF;
     procedure GetPointAddr(var APoint: PPoint; APos: Integer = -1);
-    function PointsCount: Integer;
+    function PointsCount: Integer; virtual;
     function CreateUUID: String;
   end;
 
@@ -46,64 +45,89 @@ type
   TFigureClass = class of TFigure;
   TFigureClassList = array of TFigureClass;
 
-  { TPointAnchor }
+  { TAbstractAnchor }
 
-  TPointAnchor = class(TCollectionItem)
+  TAbstractAnchor = class(TCollectionItem)
+  public
+    Selected: Boolean;
+    procedure ChangePoint(X, Y: Integer); virtual; abstract;
+    procedure ChangePoint(APoint: TPoint); virtual; abstract;
+    procedure ChangePoint(X, Y: Double); virtual; abstract;
+    procedure ChangePoint(APoint: TPointF); virtual; abstract;
+    function IsSelected(X, Y: Integer): Boolean; virtual; abstract;
+    function IsSelected(APoint: TPoint): Boolean; virtual; abstract;
+    procedure Draw(var ACanvas: TBGRABitmap); virtual; abstract;
+  end;
+
+  { TVertexAnchor }
+
+  TVertexAnchor = class(TAbstractAnchor)
   private
     FPoint: PPointF;
   public
-    Selected: Boolean;
-    procedure ChangePoint(X, Y: Integer);
-    procedure ChangePoint(APoint: TPoint);
-    procedure ChangePoint(X, Y: Double);
-    procedure ChangePoint(APoint: TPointF);
-    function IsSelected(X, Y: Integer): Boolean;
-    function IsSelected(APoint: TPoint): Boolean;
+    procedure ChangePoint(X, Y: Integer); override;
+    procedure ChangePoint(APoint: TPoint); override;
+    procedure ChangePoint(X, Y: Double); override;
+    procedure ChangePoint(APoint: TPointF); override;
+    function IsSelected(X, Y: Integer): Boolean; override;
+    function IsSelected(APoint: TPoint): Boolean; override;
     procedure SetPoint(APoint: PPointF);
     function GetPoint: TPointF;
-    procedure Draw(var ACanvas: TBGRABitmap);
+    procedure Draw(var ACanvas: TBGRABitmap); override;
   end;
 
-  PPointAnchor = ^TPointAnchor;
+  PVertexAnchor = ^TVertexAnchor;
+
+  { TEdgeAnchor }
+
+  TEdgeAnchor = class(TAbstractAnchor)
+    procedure ChangePoint(X, Y: Integer); override;
+    procedure ChangePoint(APoint: TPoint); override;
+    procedure ChangePoint(X, Y: Double); override;
+    procedure ChangePoint(APoint: TPointF); override;
+    function IsSelected(X, Y: Integer): Boolean; override;
+    function IsSelected(APoint: TPoint): Boolean; override;
+  end;
 
   { TPenFigure }
 
   TPenFigure = class(TFigure)
   private
     FPenColor:   TBGRAPixel;
+    FPenOpacity: Byte;
     FPenStyle:   TPenStyle;
     FPenSize:    Single;
-    FPenOpacity: Byte;
     procedure SetPenColor(AColor: TColor);
     function GetPenColor: TColor;
+    procedure SetPenOpacity(AByte: Byte);
+    function GetPenOpacity: Byte;
   public
-    constructor Create; override;
     procedure Clear; override;
     procedure Draw(var ACanvas: TBGRABitmap); override;
   published
     property PenColor: TColor read GetPenColor write SetPenColor;
     property PenStyle: TPenStyle read FPenStyle write FPenStyle;
     property PenSize: Single read FPenSize write FPenSize;
-    property PenOpacity: Byte read FPenOpacity write FPenOpacity;
+    property PenOpacity: Byte read GetPenOpacity write SetPenOpacity;
   end;
 
   { TBrushFigure }
 
   TBrushFigure = class(TPenFigure)
   private
-    FBrushColor:   TBGRAPixel;
-    FBrushStyle:   TBrushStyle;
-    FBrushOpacity: Byte;
+    FBrushColor: TBGRAPixel;
+    FBrushStyle: TBrushStyle;
     procedure SetBrushColor(AColor: TColor);
     function GetBrushColor: TColor;
+    procedure SetBrushOpacity(AByte: Byte);
+    function GetBrushOpacity: Byte;
   public
-    constructor Create; override;
     procedure Clear; override;
     procedure Draw(var ACanvas: TBGRABitmap); override;
   published
     property BrushColor: TColor read GetBrushColor write SetBrushColor;
     property BrushStyle: TBrushStyle read FBrushStyle write FBrushStyle;
-    property BrushOpacity: Byte read FBrushOpacity write FBrushOpacity;
+    property BrushOpacity: Byte read GetBrushOpacity write SetBrushOpacity;
   end;
 
   { TTextFigure }
@@ -123,7 +147,7 @@ type
     property Text: String read FText write FText;
     property HAlign: TAlignment read FHAlign write FHAlign;
     property VAlign: TTextLayout read FVAlign write FVAlign;
-    property FontStyle: TFontStyles read FFontStyle write FFontStyle;
+    //property FontStyle: TFontStyle read GetFontStyle write SetFontStyle;
     property FontName: String read FFontName write FFontName;
     property FontHeight: Integer read FFontHeight write FFontHeight;
   end;
@@ -169,16 +193,15 @@ type
 
   TRegularPolygon = class(TBrushFigure)
   private
-    FAngleCount: Integer;
+    FVertexes: Integer;
     function CreatePoints: TPointFList;
   public
-    constructor Create; override;
     function Rect: TRectF; override;
     procedure Draw(var ACanvas: TBGRABitmap); override;
     procedure DrawSelection(var ACanvas: TBGRABitmap); override;
     function Region: HRGN; override;
   published
-    property AngleCount: Integer read FAngleCount write FAngleCount;
+    property Vertexes: Integer read FVertexes write FVertexes;
   end;
 
   { TEllipse }
@@ -213,40 +236,89 @@ type
     property RY: Single read FRY write FRY;
   end;
 
+  { TSprayFigure }
+
+  TSprayFigure = class(TPenFigure)
+  private
+    FSeed, FIntensity, FRadius: Integer;
+  public
+    procedure Draw(var ACanvas: TBGRABitmap); override;
+    procedure DrawSelection(var ACanvas: TBGRABitmap); override;
+    function Region: HRGN; override;
+    function PointsCount: Integer; override;
+  published
+    property Seed: Integer read FSeed write FSeed;
+    property Intensity: Integer read FIntensity write FIntensity;
+    property Radius: Integer read FRadius write FRadius;
+  end;
+
+function BoundingRect(AFigures: TFigureList; Screen: Boolean = True): TRectF;
+function BoundingRect(A, B: TRectF): TRectF;
+
 const
   SelectedColor: TBGRAPixel = (blue: 0; green: 100; red: 255; alpha: 255);
-  EpsilonPoint: Single = 2;
+  DeltaOffset: float = 2;
 
 var
   Closed:      Boolean;
   FiguresList: TFigureList;
   AnchorsList: TCollection;
   CurrentFigure: PFigure;
-  CurrentAnchor: PPointAnchor;
+  CurrentAnchor: PVertexAnchor;
   BMouseDown:  Boolean;
-
-  // Property variables
-  GPenColor: TBGRAPixel = (blue: 0; green: 0; red: 0; alpha: 255);
-  GBrushColor: TBGRAPixel = (blue: 255; green: 255; red: 255; alpha: 255);
-  GBrushStyle: TBrushStyle = bsSolid;
-  GPenStyle:   TPenStyle = psSolid;
-  GPenSize:    Single = 1;
-  GAngleCount: Cardinal = 3;
-  GRoundX:     Cardinal = 5;
-  GRoundY:     Cardinal = 5;
-  GFontName:   String = 'Arial';
-  GFontSize:   Integer = 10;
-  GFontHorisontalAlignment: TAlignment = taLeftJustify;
-  GFontVerticalAlignment: TTextLayout = tlTop;
 
 implementation
 
 var
   Texture: TBGRABitmap;
 
-{ TPointAnchor }
+{ TSprayFigure }
 
-procedure TPointAnchor.ChangePoint(X, Y: Integer);
+procedure TSprayFigure.Draw(var ACanvas: TBGRABitmap);
+var
+  i, j, s: Integer;
+  PL:   TPointFList;
+  P:    TPointF;
+  f, r: float;
+begin
+  s := FSeed;
+  inherited Draw(ACanvas);
+  PL := WorldToScreen(FPoints);
+  for i := 0 to High(PL) do
+    for j := 0 to FIntensity do
+    begin
+      f   := rand(-100, 100, s);
+      r   := rand(FRadius, s);
+      P.x := PL[i].x + cos(f) * r * Scaling;
+      P.y := PL[i].y + sin(f) * r * Scaling;
+      ACanvas.DrawLineAntialias(P.x, P.y, P.x, P.y, FPenColor, 2 * FPenSize * Scaling);
+    end;
+end;
+
+procedure TSprayFigure.DrawSelection(var ACanvas: TBGRABitmap);
+ //var
+ //   R: TRect;
+begin
+  //R := Self.Rect;
+  //ACanvas.RectangleAntialias(R.Left, R.Top, R.Right, R.Bottom, SelectedColor, 1);
+end;
+
+function TSprayFigure.Region: HRGN;
+var
+  R: TRect;
+begin
+  R      := Self.Rect;
+  Result := CreateRectRgn(R.Left, R.Top, R.Right, R.Bottom);
+end;
+
+function TSprayFigure.PointsCount: Integer;
+begin
+  Result := 0
+end;
+
+{ TVertexAnchor }
+
+procedure TVertexAnchor.ChangePoint(X, Y: Integer);
 var
   P: TPointF;
 begin
@@ -255,23 +327,23 @@ begin
   FPoint^.y := P.y;
 end;
 
-procedure TPointAnchor.ChangePoint(APoint: TPoint);
+procedure TVertexAnchor.ChangePoint(APoint: TPoint);
 begin
   FPoint^ := ScreenToWorld(APoint);
 end;
 
-procedure TPointAnchor.ChangePoint(X, Y: Double);
+procedure TVertexAnchor.ChangePoint(X, Y: Double);
 begin
   FPoint^.x := X;
   FPoint^.y := Y;
 end;
 
-procedure TPointAnchor.ChangePoint(APoint: TPointF);
+procedure TVertexAnchor.ChangePoint(APoint: TPointF);
 begin
   Self.ChangePoint(APoint.x, APoint.y);
 end;
 
-function TPointAnchor.IsSelected(X, Y: Integer): Boolean;
+function TVertexAnchor.IsSelected(X, Y: Integer): Boolean;
 var
   P: TPoint;
 begin
@@ -280,36 +352,38 @@ begin
   Result := Self.IsSelected(P);
 end;
 
-function TPointAnchor.IsSelected(APoint: TPoint): Boolean;
+function TVertexAnchor.IsSelected(APoint: TPoint): Boolean;
 var
   P: TPointF;
 begin
   P      := WorldToScreen(FPoint^);
-  Result := (abs(APoint.x - P.x) < EpsilonPoint * 2) and
-    (abs(APoint.y - P.y) < EpsilonPoint * 2);
+  Result :=
+    (abs(APoint.x - P.x) < DeltaOffset * 2) and
+    (abs(APoint.y - P.y) < DeltaOffset * 2);
 end;
 
-procedure TPointAnchor.SetPoint(APoint: PPointF);
+procedure TVertexAnchor.SetPoint(APoint: PPointF);
 begin
   FPoint := APoint;
 end;
 
-function TPointAnchor.GetPoint: TPointF;
+function TVertexAnchor.GetPoint: TPointF;
 begin
   Result := FPoint^;
 end;
 
-procedure TPointAnchor.Draw(var ACanvas: TBGRABitmap);
+procedure TVertexAnchor.Draw(var ACanvas: TBGRABitmap);
 var
   P: TPoint;
 begin
   P := round(WorldToScreen(FPoint^));
   ACanvas.PenStyle := psSolid;
-  ACanvas.RectangleAntialias(P.x - EpsilonPoint, P.y - EpsilonPoint,
-    P.x + EpsilonPoint, P.y + EpsilonPoint, SelectedColor, 1, BGRAWhite);
+  ACanvas.RectangleAntialias(
+    P.x - DeltaOffset, P.y - DeltaOffset,
+    P.x + DeltaOffset, P.y + DeltaOffset, SelectedColor, 1, BGRAWhite);
   if Selected then
-    ACanvas.FillRectAntialias(P.x - EpsilonPoint, P.y - EpsilonPoint,
-      P.x + EpsilonPoint, P.y + EpsilonPoint, SelectedColor);
+    ACanvas.FillRectAntialias(P.x - DeltaOffset, P.y - DeltaOffset,
+      P.x + DeltaOffset, P.y + DeltaOffset, SelectedColor);
 end;
 
 { TRegularPolygon }
@@ -325,13 +399,7 @@ begin
   if r = 0 then
     exit;
   P := WorldToScreen(Self.CreatePoints);
-  with Result do
-  begin
-    Top    := P[0].y;
-    Left   := P[0].x;
-    Bottom := P[0].y;
-    Right  := P[0].x;
-  end;
+  Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
     Result.Top    := Min(Rect.Top, P[i].y);
@@ -390,24 +458,18 @@ var
   x, y, r, angle: Double;
   i: Integer;
 begin
-  SetLength(Result, FAngleCount);
+  SetLength(Result, FVertexes);
   Result[0] := FPoints[1];
   x     := FPoints[1].x - FPoints[0].x;
   y     := Fpoints[1].y - FPoints[0].y;
   r     := sqrt(x * x + y * y);
   angle := arctan2(y, x);
-  for i := 1 to FAngleCount - 1 do
+  for i := 1 to FVertexes - 1 do
   begin
-    angle += 2 * Pi / FAngleCount;
+    angle += 2 * Pi / FVertexes;
     Result[i].x := r * cos(angle) + FPoints[0].x;
     Result[i].y := r * sin(angle) + FPoints[0].y;
   end;
-end;
-
-constructor TRegularPolygon.Create;
-begin
-  inherited Create;
-  FAngleCount := GAngleCount;
 end;
 
 { TTextFigure }
@@ -433,7 +495,7 @@ end;
 
 procedure TPenFigure.SetPenColor(AColor: TColor);
 begin
-  FPenColor := ColorToBGRA(AColor, FPenOpacity);
+  FPenColor := ColorToBGRA(AColor);
 end;
 
 function TPenFigure.GetPenColor: TColor;
@@ -441,12 +503,14 @@ begin
   Result := BGRAToColor(FPenColor);
 end;
 
-constructor TPenFigure.Create;
+function TPenFigure.GetPenOpacity: Byte;
 begin
-  FPenSize    := 1;
-  FPenOpacity := 255;
-  FPenColor   := GPenColor;
-  FPenStyle   := GPenStyle;
+  Result := FPenColor.alpha;
+end;
+
+procedure TPenFigure.SetPenOpacity(AByte: Byte);
+begin
+  FPenColor.alpha := AByte;
 end;
 
 procedure TPenFigure.Clear;
@@ -508,7 +572,7 @@ end;
 
 procedure TBrushFigure.SetBrushColor(AColor: TColor);
 begin
-  FBrushColor := ColorToBGRA(AColor, FBrushOpacity);
+  FBrushColor := ColorToBGRA(AColor);
 end;
 
 function TBrushFigure.GetBrushColor: TColor;
@@ -516,12 +580,14 @@ begin
   Result := BGRAToColor(FBrushColor);
 end;
 
-constructor TBrushFigure.Create;
+procedure TBrushFigure.SetBrushOpacity(AByte: Byte);
 begin
-  inherited Create;
-  FBrushOpacity := 255;
-  FBrushColor   := GBrushColor;
-  FBrushStyle   := GBrushStyle;
+  FBrushColor.alpha := AByte;
+end;
+
+function TBrushFigure.GetBrushOpacity: Byte;
+begin
+  Result := FBrushColor.alpha;
 end;
 
 procedure TBrushFigure.Clear;
@@ -550,19 +616,15 @@ var
   i: Integer;
 begin
   P := WorldToScreen(FPoints);
-  with Result do
-  begin
-    Top    := P[0].y;
-    Left   := P[0].x;
-    Bottom := P[0].y;
-    Right  := P[0].x;
-  end;
+  Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
-    Result.Top    := Min(Rect.Top, P[i].y);
-    Result.Left   := Min(Rect.Left, P[i].x);
-    Result.Bottom := Max(Rect.Bottom, P[i].y);
-    Result.Right  := Max(Rect.Right, P[i].x);
+    Result := RectF(
+      Min(Result.Left, P[i].x),
+      Min(Result.Top, P[i].y),
+      Max(Result.Right, P[i].x),
+      Max(Result.Bottom, P[i].y)
+    );
   end;
 end;
 
@@ -748,10 +810,10 @@ begin
   P1 := WorldToScreen(FPoints);
   for i := 0 to High(P1) do
   begin
-    P[i].x := round(P1[i].x - 4 * EpsilonPoint * Scaling);
-    P[i].y := round(P1[i].y - 4 * EpsilonPoint * Scaling);
-    P[High(P) - i].x := round(P1[i].x + 4 * EpsilonPoint * Scaling);
-    P[High(P) - i].y := round(P1[i].y + 4 * EpsilonPoint * Scaling);
+    P[i].x := round(P1[i].x - 4 * DeltaOffset * Scaling);
+    P[i].y := round(P1[i].y - 4 * DeltaOffset * Scaling);
+    P[High(P) - i].x := round(P1[i].x + 4 * DeltaOffset * Scaling);
+    P[High(P) - i].y := round(P1[i].y + 4 * DeltaOffset * Scaling);
   end;
   Result := CreatePolygonRgn(@P[0], Length(P), WINDING);
 end;
@@ -785,14 +847,14 @@ begin
   SetLength(P, 4);
   SetLength(P1, 2);
   P1     := WorldToScreen(FPoints);
-  P[0].x := round(P1[0].x - 4 * EpsilonPoint * Scaling);
-  P[0].y := round(P1[0].y - 4 * EpsilonPoint * Scaling);
-  P[1].x := round(P1[0].x + 4 * EpsilonPoint * Scaling);
-  P[1].y := round(P1[0].y + 4 * EpsilonPoint * Scaling);
-  P[2].x := round(P1[1].x - 4 * EpsilonPoint * Scaling);
-  P[2].y := round(P1[1].y - 4 * EpsilonPoint * Scaling);
-  P[3].x := round(P1[1].x + 4 * EpsilonPoint * Scaling);
-  P[3].y := round(P1[1].y + 4 * EpsilonPoint * Scaling);
+  P[0].x := round(P1[0].x - 4 * DeltaOffset * Scaling);
+  P[0].y := round(P1[0].y - 4 * DeltaOffset * Scaling);
+  P[1].x := round(P1[0].x + 4 * DeltaOffset * Scaling);
+  P[1].y := round(P1[0].y + 4 * DeltaOffset * Scaling);
+  P[2].x := round(P1[1].x - 4 * DeltaOffset * Scaling);
+  P[2].y := round(P1[1].y - 4 * DeltaOffset * Scaling);
+  P[3].x := round(P1[1].x + 4 * DeltaOffset * Scaling);
+  P[3].y := round(P1[1].y + 4 * DeltaOffset * Scaling);
   Result := CreatePolygonRgn(@P[0], Length(P), WINDING);
 end;
 
@@ -837,10 +899,10 @@ begin
   SetLength(P, Length(P1) * 2);
   for i := 0 to High(P1) do
   begin
-    P[i].x := round(P1[i].x - 4 * EpsilonPoint * Scaling);
-    P[i].y := round(P1[i].y - 4 * EpsilonPoint * Scaling);
-    P[High(P) - i].x := round(P1[i].x + 4 * EpsilonPoint * Scaling);
-    P[High(P) - i].y := round(P1[i].y + 4 * EpsilonPoint * Scaling);
+    P[i].x := round(P1[i].x - 4 * DeltaOffset * Scaling);
+    P[i].y := round(P1[i].y - 4 * DeltaOffset * Scaling);
+    P[High(P) - i].x := round(P1[i].x + 4 * DeltaOffset * Scaling);
+    P[High(P) - i].y := round(P1[i].y + 4 * DeltaOffset * Scaling);
   end;
   Result := CreatePolygonRgn(@P[0], Length(P), WINDING);
 end;
@@ -918,10 +980,10 @@ begin
   P := WorldToScreen(FPoints);
   with Result do
   begin
-    Top    := P[0].y + Sign(P[0].y - P[1].y) * abs(P[0].y - P[1].y);
-    Left   := P[0].x + Sign(P[0].x - P[1].x) * abs(P[0].x - P[1].x);
-    Bottom := P[1].y;
-    Right  := P[1].x;
+    Top    := min(P[0].y - abs(P[0].y - P[1].y), P[0].y);
+    Left   := min(P[0].x - abs(P[0].x - P[1].x), P[0].x);
+    Bottom := max(P[0].y - abs(P[0].y - P[1].y), P[0].y);
+    Right  := max(P[0].x - abs(P[0].x - P[1].x), P[0].x);
   end;
 end;
 
@@ -962,9 +1024,10 @@ begin
   if Selected then
   begin
     ACanvas.PenStyle := psDash;
-    ACanvas.RectangleAntialias(round(P[0].x + Sign(P[0].x - P[1].x) *
-      abs(P[0].x - P[1].x)), round(P[0].y + Sign(P[0].y - P[1].y) *
-      abs(P[0].y - P[1].y)), round(P[1].x), round(P[1].y), SelectedColor, 1);
+    ACanvas.RectangleAntialias(
+      round(P[0].x + Sign(P[0].x - P[1].x) * abs(P[0].x - P[1].x)),
+      round(P[0].y + Sign(P[0].y - P[1].y) * abs(P[0].y - P[1].y)),
+      round(P[1].x), round(P[1].y), SelectedColor, 1);
   end;
 end;
 
@@ -1012,8 +1075,60 @@ begin
   Result := CreateRectRgn(P[0].x, P[0].y, P[1].x, P[1].y);
 end;
 
+{ TEdgeAnchor }
+
+procedure TEdgeAnchor.ChangePoint(X, Y: Integer);
+begin
+
+end;
+
+procedure TEdgeAnchor.ChangePoint(APoint: TPoint);
+begin
+
+end;
+
+procedure TEdgeAnchor.ChangePoint(X, Y: Double);
+begin
+
+end;
+
+procedure TEdgeAnchor.ChangePoint(APoint: TPointF);
+begin
+
+end;
+
+function TEdgeAnchor.IsSelected(X, Y: Integer): Boolean;
+begin
+
+end;
+
+function TEdgeAnchor.IsSelected(APoint: TPoint): Boolean;
+begin
+
+end;
+
+function BoundingRect(AFigures: TFigureList; Screen: Boolean): TRectF;
+var
+  i: Integer;
+begin
+  try
+    Result := AFigures[0].Rect;
+    for i := 1 to High(AFigures) do
+      Result := BoundingRect(Result, AFigures[i].Rect);
+  except
+    Result := RectF(0, 0, 0, 0);
+  end;
+end;
+
+function BoundingRect(A, B: TRectF): TRectF;
+begin
+  Result := RectF(Min(A.Left, B.Left), Min(A.Top, B.Top), Max(A.Right, B.Right),
+    Max(A.Bottom, B.Bottom));
+end;
+
 initialization
-  AnchorsList := TCollection.Create(TPointAnchor);
+  AnchorsList := TCollection.Create(TVertexAnchor);
+
   RegisterClass(TFigure);
   RegisterClass(TPenFigure);
   RegisterClass(TBrushFigure);
@@ -1026,5 +1141,6 @@ initialization
   RegisterClass(TEllipse);
   RegisterClass(TRectangle);
   RegisterClass(TRoundRect);
+  RegisterClass(TSprayFigure);
 
 end.

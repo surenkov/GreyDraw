@@ -5,7 +5,7 @@ unit Loaders;
 interface
 
 uses
-  Classes, SysUtils, Drawable, typinfo, fpjson, fpjsonrtti, jsonparser, Dialogs;
+  Classes, SysUtils, Drawable, typinfo, fpjson, fpjsonrtti, jsonparser, Dialogs, History;
 
 type
   TStringLoader = function(ASerialized: String): TFigure;
@@ -22,10 +22,12 @@ type
       Data: TObject; var Continue: Boolean);
   end;
 
+procedure GreyDrawLoadFromText(AText: String; Replace: Boolean = False);
 procedure GreyDrawLoadFromFile(var AFileName: String);
 procedure GreyDrawSaveToFile(var AFileName: String);
 function GreyDrawLoadFromString(ASerialized: String): TFigure;
 function GreyDrawSaveToString(ADeserialized: TFigure): String;
+function GreyDrawSaveToText: String;
 function GreyDrawSaveToJSONData(ADeserialized: TFigure): TJSONObject;
 
 procedure CryoDrawLoadFromFile(var AFileName: String);
@@ -35,10 +37,11 @@ function CryoDrawSaveToString(ADeserialized: TFigure): String;
 
 const
   CurrentGDFSign    = 'GDFImage';
-  CurrentGDFVersion = 1;
+  CurrentGDFVersion = '0.0.1';
 
 var
   FileName:    String;
+  FileContent: String = '{}';
   CurrentMode: String = CurrentGDFSign;
 
 implementation
@@ -48,6 +51,38 @@ uses MainForm, Graphics, Properties;
 var
   Iterator: TParserParam;
 
+procedure GreyDrawLoadFromText(AText: String; Replace: Boolean);
+var
+  JObject: TJSONData;
+  i, size: Integer;
+begin
+  with TJSONParser.Create(AText) do
+    try
+      JObject := Parse;
+    except
+      ShowMessage('Файл поврежден или имеет неверный формат.');
+      Destroy;
+    end;
+  if not Replace then
+  begin
+    size := Length(FiguresList);
+    SetLength(FiguresList, JObject.Count + Length(FiguresList));
+  end
+  else
+  begin
+    size := 0;
+    for i := 0 to High(FiguresList) do
+      FiguresList[i].Free;
+    SetLength(FiguresList, JObject.Count);
+  end;
+  for i := size to High(FiguresList) do
+  begin
+    FiguresList[i] := GreyDrawLoadFromString(JObject.Items[i - size].FormatJSON());
+  end;
+  JObject.Destroy;
+  GreyDrawForm.ViewPort.Invalidate;
+end;
+
 procedure GreyDrawLoadFromFile(var AFileName: String);
 var
   Content: String = '';
@@ -55,6 +90,7 @@ var
   JObject: TJSONObject;
   i:     Integer;
   FFile: Text;
+  Fail:  Boolean = False;
 begin
   if not FileExists(AFileName) then
     exit;
@@ -65,31 +101,46 @@ begin
     ReadLn(FFile, CurrStr);
     Content := Concat(Content, #13#10, CurrStr);
   end;
+  FileContent := Copy(Content, 0, Length(Content));
   with TJSONParser.Create(Content) do
     try
-      JObject := Parse as TJSONObject;
+      try
+        JObject := Parse as TJSONObject;
+      except
+        ShowMessage('Файл поврежден или имеет неверный формат.');
+        Fail := True;
+      end;
     finally
       Destroy;
     end;
-  try
-    if JObject.Get('sign', 'BlahBlahBlah') = CurrentGDFSign then
-      JObject.Extract('sign')
-    else
-      raise Exception.Create('Файл поврежден или имеет неверный формат.');
-    if JObject.Get('version', -1) <= CurrentGDFVersion then
-      JObject.Extract('version')
-    else
-      raise Exception.Create('Формат файла несовместим с данной вресией редактора.');
-  except
-    on e: Exception do
+  if not Fail then
+    try
+      if JObject.Get('sign', 'BlahBlahBlah') = CurrentGDFSign then
+        JObject.Extract('sign')
+      else
+        raise Exception.Create('Файл поврежден или имеет неверный формат.');
+      if JObject.Get('version', '0.0.0') <= CurrentGDFVersion then
+        JObject.Extract('version')
+      else
+        raise Exception.Create('Формат файла несовместим с данной вресией редактора.');
+      HistoryArray[0] := JObject.FormatJSON();
+    except
+      on e: Exception do
+      begin
+        ShowMessage(e.Message);
+        JObject.Destroy;
+        Fail := True;
+      end;
+    end;
+  if not Fail then
+  begin
+    SetLength(FiguresList, JObject.Count);
+    for i := 0 to JObject.Count - 1 do
     begin
-      ShowMessage(e.Message);
-      JObject.Destroy;
+      FiguresList[i].Free;
+      FiguresList[i] := GreyDrawLoadFromString(JObject.Items[i].FormatJSON());
     end;
   end;
-  SetLength(FiguresList, JObject.Count);
-  for i := 0 to JObject.Count - 1 do
-    FiguresList[i] := GreyDrawLoadFromString(JObject.Items[i].FormatJSON());
   GreyDrawForm.ViewPort.Invalidate;
   CloseFile(FFile);
 end;
@@ -117,7 +168,6 @@ end;
 function GreyDrawLoadFromString(ASerialized: String): TFigure;
 var
   JObject: TJSONObject;
-  ObjType: String;
 begin
   with TJSONParser.Create(ASerialized) do
     try
@@ -131,6 +181,7 @@ begin
   except
     ShowMessage('Файл поврежден или имеет неверный формат.');
     JObject.Destroy;
+    Result := nil;
   end;
 end;
 
@@ -142,6 +193,18 @@ begin
     finally
       Destroy;
     end;
+end;
+
+function GreyDrawSaveToText: String;
+var
+  i:     Integer;
+  JRoot: TJSONObject;
+begin
+  JRoot := TJSONObject.Create;
+  for i := 0 to High(FiguresList) do
+    JRoot.Add(FiguresList[i].CreateUUID, GreyDrawSaveToJSONData(FiguresList[i]));
+  Result := JRoot.FormatJSON();
+  JRoot.Destroy;
 end;
 
 function GreyDrawSaveToJSONData(ADeserialized: TFigure): TJSONObject;

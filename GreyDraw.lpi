@@ -39,21 +39,15 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="4">
+    <RequiredPackages Count="2">
       <Item1>
-        <PackageName Value="pascalscript"/>
+        <PackageName Value="BGRABitmapPack"/>
       </Item1>
       <Item2>
-        <PackageName Value="RunTimeTypeInfoControls"/>
-      </Item2>
-      <Item3>
-        <PackageName Value="BGRABitmapPack"/>
-      </Item3>
-      <Item4>
         <PackageName Value="LCL"/>
-      </Item4>
+      </Item2>
     </RequiredPackages>
-    <Units Count="8">
+    <Units Count="10">
       <Unit0>
         <Filename Value="GreyDraw.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -97,6 +91,16 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="Loaders"/>
       </Unit7>
+      <Unit8>
+        <Filename Value="History.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="History"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="utils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Utils"/>
+      </Unit9>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -119,10 +123,13 @@
         <StackChecks Value="True"/>
       </Checks>
       <VerifyObjMethodCallValidity Value="True"/>
+      <Optimizations>
+        <OptimizationLevel Value="0"/>
+      </Optimizations>
     </CodeGeneration>
     <Linking>
       <Debugging>
-        <DebugInfoType Value="dsDwarf2"/>
+        <DebugInfoType Value="dsStabs"/>
         <UseExternalDbgSyms Value="True"/>
       </Debugging>
       <Options>
@@ -132,6 +139,9 @@
       </Options>
     </Linking>
     <Other>
+      <Verbosity>
+        <ShowDebugInfo Value="True"/>
+      </Verbosity>
       <CompilerMessages>
         <MsgFileName Value=""/>
       </CompilerMessages>

@@ -5,16 +5,16 @@ unit Tools;
 interface
 
 uses
-  Classes, SysUtils, Drawable, Graphics, Transformations, typinfo, Math,
-  BGRABitmap, BGRABitmapTypes, Properties, Controls, StdCtrls, Forms, Dialogs,
-  LCLIntf, LCLType, Loaders, FileUtil;
+  Classes, SysUtils, Graphics, FileUtil, Controls, StdCtrls, ExtCtrls, Forms,
+  Dialogs, Math, typinfo, BGRABitmap, BGRABitmapTypes, LCLIntf, LCLType,
+  Properties, Drawable, Loaders, Transformations, Utils;
 
 type
 
   { TTool }
 
   TTool = class(TPersistent)
-    class procedure CreateControls(var AOwner: TWinControl); virtual; abstract;
+    class procedure CreateControls(var AOwner: TWinControl); virtual;
     class procedure MouseDown(X, Y: Integer; Shift: TShiftState); virtual;
     class procedure MouseMove(X, Y: Integer; Shift: TShiftState); virtual;
     class procedure MouseUp(X, Y: Integer; Shift: TShiftState); virtual;
@@ -29,19 +29,21 @@ type
   { TPenFigureTool }
 
   TPenFigureTool = class(TTool)
+    class procedure MouseDown(X, Y: Integer; Shift: TShiftState); override;
+    class procedure CreateFigure; override;
     class procedure CreateControls(var AOwner: TWinControl); override;
   end;
 
   { TBrushFigureTool }
 
   TBrushFigureTool = class(TPenFigureTool)
+    class procedure CreateFigure; override;
     class procedure CreateControls(var AOwner: TWinControl); override;
   end;
 
   { TLineTool }
 
   TLineTool = class(TPenFigureTool)
-  public
     class procedure CreateControls(var AOwner: TWinControl); override;
     class procedure MouseDown(X, Y: Integer; Shift: TShiftState); override;
     class procedure MouseMove(X, Y: Integer; Shift: TShiftState); override;
@@ -53,7 +55,6 @@ type
   { TPolylineTool }
 
   TPolylineTool = class(TPenFigureTool)
-  public
     class procedure CreateControls(var AOwner: TWinControl); override;
     class procedure MouseDown(X, Y: Integer; Shift: TShiftState); override;
     class procedure MouseMove(X, Y: Integer; Shift: TShiftState); override;
@@ -65,7 +66,6 @@ type
   { TBezierTool }
 
   TBezierTool = class(TPenFigureTool)
-  public
     class procedure CreateControls(var AOwner: TWinControl); override;
     class procedure MouseDown(X, Y: Integer; Shift: TShiftState); override;
     class procedure MouseMove(X, Y: Integer; Shift: TShiftState); override;
@@ -150,9 +150,9 @@ type
     class function Hint: String; override;
   end;
 
-  { TSelectFigureTool }
+  { TSelectTool }
 
-  TSelectFigureTool = class(TTool)
+  TSelectTool = class(TTool)
     class procedure CreateControls(var AOwner: TWinControl); override;
     class procedure MouseDown(X, Y: Integer; Shift: TShiftState); override;
     class procedure MouseMove(X, Y: Integer; Shift: TShiftState); override;
@@ -161,34 +161,40 @@ type
     class function Hint: String; override;
   end;
 
-  { TSelectPointTool }
+  { TSprayTool }
 
-  TSelectPointTool = class(TTool)
+  TSprayTool = class(TPenFigureTool)
+  private
+    class var Radius, Intensity: Integer;
+  published
     class procedure CreateControls(var AOwner: TWinControl); override;
     class procedure MouseDown(X, Y: Integer; Shift: TShiftState); override;
     class procedure MouseMove(X, Y: Integer; Shift: TShiftState); override;
     class procedure MouseUp(X, Y: Integer; Shift: TShiftState); override;
+    class procedure OnTimer(Sender: TObject);
+    class procedure CreateFigure; override;
     class function Image: String; override;
     class function Hint: String; override;
   end;
 
 var
   FigureToolsList, EditorTools: TToolClassList;
-  CurrentTool:     TToolClass;
-  FigureClosed:    Boolean = True;
+  CurrentTool: TToolClass;
+  FigureClosed: Boolean = True;
   ControlsCreated: Boolean;
-  DeltaX, DeltaY:  Single;
-  SelectionRect:   TRect;
+  DeltaX, DeltaY: Single;
+  GPanel: TPanel;
+  SelectionRect: TRect;
 
 procedure RegisterTool(AClass: TToolClass);
 
 implementation
 
-uses MainForm;
-
 var
-  index:  Integer;
-  DeltaP: TPointF;
+  index:     Integer;
+  DeltaP:    TPointF;
+  JustTimer: TTimer;
+
 
 procedure RegisterTool(AClass: TToolClass);
 begin
@@ -197,121 +203,91 @@ begin
   RegisterClass(AClass);
 end;
 
+{ TSprayTool }
+
+class procedure TSprayTool.CreateControls(var AOwner: TWinControl);
+begin
+  TSprayProperty.CreateControls(AOwner);
+end;
+
+class procedure TSprayTool.MouseDown(X, Y: Integer; Shift: TShiftState);
+begin
+  Self.CreateFigure;
+  inherited MouseDown(X, Y, Shift);
+  CurrentFigure^.AddPoint(X, Y);
+  JustTimer.OnTimer  := @OnTimer;
+  JustTimer.Interval := 10;
+  JustTimer.Enabled  := True;
+end;
+
+class procedure TSprayTool.MouseMove(X, Y: Integer; Shift: TShiftState);
+begin
+  if BMouseDown then
+    CurrentFigure^.AddPoint(ScreenToWorld(X, Y));
+end;
+
+class procedure TSprayTool.MouseUp(X, Y: Integer; Shift: TShiftState);
+begin
+  inherited MouseUp(X, Y, Shift);
+  JustTimer.Enabled := False;
+end;
+
+class procedure TSprayTool.OnTimer(Sender: TObject);
+begin
+  CurrentFigure^.AddPoint(CurrentFigure^.GetPoint);
+  ValidEvent;
+end;
+
+class procedure TSprayTool.CreateFigure;
+begin
+  SetLength(FiguresList, Length(FiguresList) + 1);
+  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure^ := TSprayFigure.Create;
+  inherited CreateFigure;
+  TSprayProperty.SetDefaultProperties(FiguresList);
+end;
+
+class function TSprayTool.Image: String;
+begin
+  Result := 'spray.png';
+end;
+
+class function TSprayTool.Hint: String;
+begin
+  Result := 'Спрей';
+end;
+
 { TPenFigureTool }
+
+class procedure TPenFigureTool.MouseDown(X, Y: Integer; Shift: TShiftState);
+begin
+  inherited MouseDown(X, Y, Shift);
+  ChangeEvent(True);
+end;
+
+class procedure TPenFigureTool.CreateFigure;
+var
+  F: TFigure;
+begin
+  for F in FiguresList do
+    F.Selected := False;
+  CurrentFigure^.Selected := True;
+  TPenProperty.SetDefaultProperties(FiguresList);
+  ValidEvent;
+end;
 
 class procedure TPenFigureTool.CreateControls(var AOwner: TWinControl);
 begin
   ctrllol := 0;
-  DrawProperty.CreatePenSpinBox(AOwner);
-  DrawProperty.CreatePenComboBox(AOwner);
-end;
-
-{ TSelectPointTool }
-
-class procedure TSelectPointTool.CreateControls(var AOwner: TWinControl);
-begin
-
-end;
-
-class procedure TSelectPointTool.MouseDown(X, Y: Integer; Shift: TShiftState);
-var
-  i, j: Integer;
-begin
-  if not (ssCtrl in Shift) then
-    for i := AnchorsList.Count - 1 downto 0 do
-      with (AnchorsList.Items[i] as TPointAnchor) do
-        if IsSelected(X, Y) then
-        begin
-          Selected := not (Selected and (ssShift in Shift));
-          if not (ssShift in Shift) then
-            for j := i - 1 downto 0 do
-              (AnchorsList.Items[j] as TPointAnchor).Selected := False;
-          Break;
-        end
-        else if not (ssShift in Shift) then
-        begin
-          Selected := False;
-        end;
-  with SelectionRect do
-  begin
-    Left   := X;
-    Top    := Y;
-    Right  := X;
-    Bottom := Y;
-  end;
-  DeltaP := ScreenToWorld(X, Y);
-end;
-
-class procedure TSelectPointTool.MouseMove(X, Y: Integer; Shift: TShiftState);
-var
-  i, j:  Integer;
-  P, SP: TPointF;
-  Rgn:   HRGN;
-  Rct:   TRect;
-begin
-  if BMouseDown then
-  begin
-    SP := ScreenToWorld(X, Y);
-    if not (ssShift in Shift) or (ssCtrl in Shift) then
-    begin
-      for i := AnchorsList.Count - 1 downto 0 do
-        with  AnchorsList.Items[i] as TPointAnchor do
-          if Selected then
-          begin
-            P := GetPoint;
-            ChangePoint(P.x - DeltaP.x + SP.x, P.y - DeltaP.y + SP.y);
-          end;
-    end
-    else if ssShift in Shift then
-    begin
-      with SelectionRect do
-      begin
-        Left   := Min(Left, X);
-        Top    := Min(Top, Y);
-        Right  := Max(Right, X);
-        Bottom := Max(Bottom, Y);
-      end;
-      for i := AnchorsList.Count - 1 downto 0 do
-        with (AnchorsList.Items[i] as TPointAnchor) do
-          Selected := PtInRect(SelectionRect, Point(WorldToScreen(GetPoint)));
-    end;
-    DeltaP := SP;
-  end;
-end;
-
-class procedure TSelectPointTool.MouseUp(X, Y: Integer; Shift: TShiftState);
-var
-  i: Integer;
-begin
-  if not ((ssShift in Shift) or (ssCtrl in Shift)) then
-    for i := AnchorsList.Count - 1 downto 0 do
-      (AnchorsList.Items[i] as TPointAnchor).Selected := False;
-  DeltaP := PointF(0, 0);
-  with SelectionRect do
-  begin
-    Top    := 0;
-    Left   := 0;
-    Bottom := 0;
-    Right  := 0;
-  end;
-  BMouseDown := False;
-end;
-
-class function TSelectPointTool.Image: String;
-begin
-  Result := 'pointsel.png';
-end;
-
-class function TSelectPointTool.Hint: String;
-begin
-  Result := 'Выделение точек';
+  TPenProperty.CreateControls(AOwner);
 end;
 
 { TTextTool }
 
 class procedure TTextTool.CreateControls(var AOwner: TWinControl);
 begin
-
+  ctrllol := 0;
+  TTextProperty.CreateControls(AOwner);
 end;
 
 class procedure TTextTool.MouseDown(X, Y: Integer; Shift: TShiftState);
@@ -344,7 +320,7 @@ end;
 class procedure TRegularPolygonTool.CreateControls(var AOwner: TWinControl);
 begin
   inherited CreateControls(AOwner);
-  DrawProperty.CreateAngleSpinBox(AOwner);
+  TRegularProperty.CreateControls(AOwner);
 end;
 
 class procedure TRegularPolygonTool.MouseDown(X, Y: Integer; Shift: TShiftState);
@@ -366,6 +342,8 @@ begin
   SetLength(FiguresList, Length(FiguresList) + 1);
   CurrentFigure  := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TRegularPolygon.Create;
+  inherited CreateFigure;
+  TRegularProperty.SetDefaultProperties(FiguresList);
 end;
 
 class function TRegularPolygonTool.Image: String;
@@ -378,135 +356,32 @@ begin
   Result := 'Правильный многоугольник';
 end;
 
-{ TSelectFigureTool }
+{ TSelectTool }
 
-class procedure TSelectFigureTool.CreateControls(var AOwner: TWinControl);
+class procedure TSelectTool.CreateControls(var AOwner: TWinControl);
 begin
 
 end;
 
-class procedure TSelectFigureTool.MouseDown(X, Y: Integer; Shift: TShiftState);
+type
+  TSelectionState = (ssNone, ssOnPoint, ssOnFigure, ssMultiPoint, ssMultiFigure);
+  TMovementState = (msNone, msMoving);
+
 var
-  i, j: Integer;
-  A:    TCollectionItem;
-  R:    HWND;
+  SelectState:   TSelectionState = ssNone;
+  MovementState: TMovementState = msNone;
+
+class procedure TSelectTool.MouseDown(X, Y: Integer; Shift: TShiftState);
 begin
-  if not (ssCtrl in Shift) then
-  begin
-    for i := High(FiguresList) downto 0 do
-    begin
-      R := FiguresList[i].Region;
-      try
-        if PtInRegion(R, X, Y) then
-        begin
-          FiguresList[i].Selected :=
-            not (FiguresList[i].Selected and (ssShift in Shift));
-          FiguresList[i].Hovered := False;
-          CurrentFigure := @FiguresList[i];
-          if not (ssShift in Shift) then
-            for j := i - 1 downto 0 do
-              FiguresList[j].Selected := False;
-          Break;
-        end
-        else if not (ssShift in Shift) then
-        begin
-          FiguresList[i].Selected := False;
-          CurrentFigure := nil;
-        end;
-      finally
-        DeleteObject(R);
-      end;
-    end;
-  end;
-  with SelectionRect do
-  begin
-    Left   := X;
-    Top    := Y;
-    Right  := X;
-    Bottom := Y;
-  end;
-  AnchorsList.Clear;
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected then
-      for j := 0 to FiguresList[i].PointsCount do
-      begin
-        A := AnchorsList.Add;
-        (A as TPointAnchor).SetPoint(FiguresList[i].GetPointAddr(j));
-      end;
-  DeltaP := ScreenToWorld(X, Y);
+
 end;
 
-class procedure TSelectFigureTool.MouseMove(X, Y: Integer; Shift: TShiftState);
-var
-  i, j:  Integer;
-  P, SP: TPointF;
-  R:     HRGN;
-  A:     TCollectionItem;
-  sel:   Boolean = False;
+class procedure TSelectTool.MouseMove(X, Y: Integer; Shift: TShiftState);
 begin
-  if BMouseDown then
-  begin
-    SP := ScreenToWorld(X, Y);
-    if not (ssShift in Shift) or (ssCtrl in Shift) then
-    begin
-      for i := High(FiguresList) downto 0 do
-        if FiguresList[i].Selected then
-        begin
-          for j := FiguresList[i].PointsCount downto 0 do
-          begin
-            P := FiguresList[i].GetPoint(j);
-            FiguresList[i].ChangePoint(P.x - DeltaP.x + SP.x, P.y - DeltaP.y + SP.y, j);
-          end;
-        end;
-    end
-    else if ssShift in Shift then
-    begin
-      with SelectionRect do
-      begin
-        Right  := X;
-        Bottom := Y;
-      end;
-      for i := High(FiguresList) downto 0 do
-      begin
-        R := FiguresList[i].Region;
-        try
-          FiguresList[i].Selected := RectInRegion(R, SelectionRect);
-        finally
-          DeleteObject(R);
-        end;
-      end;
-      AnchorsList.Clear;
-      for i := High(FiguresList) downto 0 do
-        if FiguresList[i].Selected then
-          for j := 0 to FiguresList[i].PointsCount do
-          begin
-            A := AnchorsList.Add;
-            (A as TPointAnchor).SetPoint(FiguresList[i].GetPointAddr(j));
-          end;
-    end;
-  end
-  else
-    for i := High(FiguresList) downto 0 do
-    begin
-      R := FiguresList[i].Region;
-      try
-        if PtInRegion(R, X, Y) then
-        begin
-          FiguresList[i].Hovered := True;
-          for j := i - 1 downto 0 do
-            FiguresList[j].Hovered := False;
-          Break;
-        end
-        else
-          FiguresList[i].Hovered := False;
-      finally
-        DeleteObject(R);
-      end;
-    end;
-  DeltaP := SP;
+
 end;
 
-class procedure TSelectFigureTool.MouseUp(X, Y: Integer; Shift: TShiftState);
+class procedure TSelectTool.MouseUp(X, Y: Integer; Shift: TShiftState);
 
   function GetLeastCommonClass(AFClass, ASClass: TClass): TClass;
   begin
@@ -518,46 +393,16 @@ class procedure TSelectFigureTool.MouseUp(X, Y: Integer; Shift: TShiftState);
       exit(GetLeastCommonClass(AFClass.ClassParent, ASClass.ClassParent));
   end;
 
-var
-  i:   Integer;
-  lcc: TClass = nil;
 begin
-  for i := 0 to High(FiguresList) do
-    if FiguresList[i].Selected then
-    begin
-      lcc := FiguresList[i].ClassType;
-      break;
-    end;
-  for i := 0 to High(FiguresList) do
-    if FiguresList[i].Selected then
-    begin
-      lcc := GetLeastCommonClass(lcc, FiguresList[i].ClassType);
-    end;
-  for i := GreyDrawForm.PropPanel.ControlCount - 1 downto 0 do
-    GreyDrawForm.PropPanel.Controls[i].Free;
-  if lcc <> nil then
-  begin
-    GreyDrawForm.PropPanel.Caption := lcc.ClassName;
-    TToolClass(GetClass(Concat(lcc.ClassName, 'Tool'))).CreateControls(
-      TWinControl(GreyDrawForm.PropPanel));
-  end;
-  DeltaP := PointF(0, 0);
-  with SelectionRect do
-  begin
-    Top    := 0;
-    Left   := 0;
-    Bottom := 0;
-    Right  := 0;
-  end;
-  BMouseDown := False;
+
 end;
 
-class function TSelectFigureTool.Image: String;
+class function TSelectTool.Image: String;
 begin
   Result := 'figuresel.png';
 end;
 
-class function TSelectFigureTool.Hint: String;
+class function TSelectTool.Hint: String;
 begin
   Result := 'Выделение фигуры';
 end;
@@ -567,7 +412,7 @@ end;
 class procedure TRoundRectTool.CreateControls(var AOwner: TWinControl);
 begin
   inherited CreateControls(AOwner);
-  DrawProperty.CreateRXRY(AOwner);
+  TRoundProperty.CreateControls(AOwner);
 end;
 
 class procedure TRoundRectTool.MouseDown(X, Y: Integer; Shift: TShiftState);
@@ -589,8 +434,8 @@ begin
   SetLength(FiguresList, Length(FiguresList) + 1);
   CurrentFigure  := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TRoundRect.Create;
-  (CurrentFigure^ as TRoundRect).RX := 5;
-  (CurrentFigure^ as TRoundRect).RY := 5;
+  inherited CreateFigure;
+  TRoundProperty.SetDefaultProperties(FiguresList);
 end;
 
 class function TRoundRectTool.Image: String;
@@ -605,10 +450,16 @@ end;
 
 { TBrushFigureTool }
 
+class procedure TBrushFigureTool.CreateFigure;
+begin
+  inherited CreateFigure;
+  TBrushProperty.SetDefaultProperties(FiguresList);
+end;
+
 class procedure TBrushFigureTool.CreateControls(var AOwner: TWinControl);
 begin
   inherited CreateControls(AOwner);
-  DrawProperty.CreateBrushComboBox(AOwner);
+  TBrushProperty.CreateControls(AOwner);
 end;
 
 { TDragTool }
@@ -673,6 +524,7 @@ begin
   SetLength(FiguresList, Length(FiguresList) + 1);
   CurrentFigure  := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TEllipse.Create;
+  inherited CreateFigure;
 end;
 
 class function TEllipseTool.Image: String;
@@ -713,6 +565,8 @@ begin
   SetLength(FiguresList, Length(FiguresList) + 1);
   CurrentFigure  := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TRectangle.Create;
+  inherited CreateFigure;
+  TRoundProperty.SetDefaultProperties(FiguresList);
 end;
 
 class function TRectangleTool.Image: String;
@@ -755,6 +609,7 @@ begin
   CurrentFigure  := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TPolygon.Create;
   FigureClosed   := False;
+  inherited CreateFigure;
 end;
 
 class function TPolygonTool.Image: String;
@@ -810,6 +665,7 @@ begin
   CurrentFigure^ := TBezier.Create;
   FigureClosed := False;
   index := 0;
+  inherited CreateFigure;
 end;
 
 class function TBezierTool.Image: String;
@@ -852,6 +708,7 @@ begin
   CurrentFigure  := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TPolyline.Create;
   FigureClosed   := False;
+  inherited CreateFigure;
 end;
 
 class function TPolylineTool.Image: String;
@@ -890,6 +747,7 @@ begin
   SetLength(FiguresList, Length(FiguresList) + 1);
   CurrentFigure  := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TLine.Create;
+  inherited CreateFigure;
 end;
 
 class function TLineTool.Image: String;
@@ -904,26 +762,34 @@ end;
 
 { TTool }
 
+class procedure TTool.CreateControls(var AOwner: TWinControl);
+begin
+
+end;
+
 class procedure TTool.MouseDown(X, Y: Integer; Shift: TShiftState);
 var
   i: Integer;
 begin
-  AnchorsList.Clear;
+  DeltaP := ScreenToWorld(X, Y);
   for i := High(FiguresList) downto 0 do
     FiguresList[i].Selected := @FiguresList[i] = CurrentFigure;
 end;
 
 class procedure TTool.MouseMove(X, Y: Integer; Shift: TShiftState);
 begin
-
+  DeltaP := ScreenToWorld(X, Y);
 end;
 
 class procedure TTool.MouseUp(X, Y: Integer; Shift: TShiftState);
 begin
-
+  DeltaP := PointF(0, 0);
 end;
 
 initialization
+  JustTimer := TTimer.Create(nil);
+  JustTimer.Enabled := False;
+
   RegisterTool(TLineTool);
   RegisterTool(TPolylineTool);
   RegisterTool(TBezierTool);
@@ -932,8 +798,8 @@ initialization
   RegisterTool(TRectangleTool);
   RegisterTool(TRoundRectTool);
   RegisterTool(TEllipseTool);
+  RegisterTool(TSprayTool);
   RegisterTool(TDragTool);
-  RegisterTool(TSelectFigureTool);
-  RegisterTool(TSelectPointTool);
+  RegisterTool(TSelectTool);
 
 end.

@@ -5,57 +5,143 @@ unit Properties;
 interface
 
 uses
-  SysUtils, Classes, Drawable, LCLType, Controls, StdCtrls, ExtCtrls, Spin,
-  BGRABitmap, BGRABitmapTypes, Graphics, Forms, typinfo, jsonparser;
+  SysUtils, Classes, Drawable, LCLType, Controls, StdCtrls, ExtCtrls, Spin, Loaders,
+  BGRABitmap, BGRABitmapTypes, Graphics, Forms, typinfo, jsonparser, History, Math,
+  variants;
 
 type
 
-  { DrawProperty }
+  TInvalidateEvent = procedure of object;
+  TChangeEvent = procedure(AChanged: Boolean) of object;
 
-  DrawProperty = class
-    class procedure CreateLabel(var AOwner: TWinControl; ACaption: String);
-    class procedure CreateFontComboBox(var AOwner: TWinControl);
-    class procedure CreateBrushComboBox(var AOwner: TWinControl);
-    class procedure CreatePenComboBox(var AOwner: TWinControl);
-    class procedure CreatePenSpinBox(var AOwner: TWinControl);
-    class procedure CreateAngleSpinBox(var AOwner: TWinControl);
-    class procedure CreateRXRY(var AOwner: TWinControl);
-  public
-    class procedure PenSizeChange(Sender: TObject);
-    class procedure AngleCountChange(Sender: TObject);
-    class procedure SetPenStyle(Sender: TObject);
-    class procedure SetPenColor(AColor: TColor);
-    class procedure SetFontName(Sender: TObject);
-    class procedure SetFontStyle(Sender: TObject);
-    class procedure SetBrushStyle(Sender: TObject);
-    class procedure SetBrushColor(AColor: TColor);
-    class procedure RXChange(Sender: TObject);
-    class procedure RYChange(Sender: TObject);
-    class procedure DrawComboBoxPenItem(Control: TWinControl;
-      index: Integer; Rect: TRect; State: TOwnerDrawState);
-    class procedure DrawComboBoxBrushItem(Control: TWinControl;
-      index: Integer; Rect: TRect; State: TOwnerDrawState);
+  { TAbstractProperty }
+
+  TAbstractProperty = class
+    class procedure SetDefaultProperties(AFigures: array of TFigure); virtual; abstract;
+    class procedure CreateLabel(AOwner: TWinControl; ACaption: String);
+    class procedure CreateControls(AOwner: TWinControl);
+      virtual; abstract;
   end;
 
+  { TPenProperty }
+
+  TPenProperty = class(TAbstractProperty)
+  private
+    class var
+    FPenColor: TBGRAPixel;
+    FPenSize:  float;
+    FPenStyle: TPenStyle;
+    class procedure PenSizeChanged(Sender: TObject);
+    class procedure PenStyleChanged(Sender: TObject);
+    class procedure PenColorChanged(Sender: TObject);
+    class procedure DrawComboBoxPenItem(Control: TWinControl;
+      index: Integer; ARect: TRect; State: TOwnerDrawState);
+  public
+    class procedure SetDefaultProperties(AFigures: array of TFigure); override;
+    class procedure SetPenColor(AColor: TColor);
+    class procedure SetPenOpacity(AOpacity: Byte);
+    class procedure SetPenSize(ASize: float);
+    class procedure SetPenStyle(AStyle: TPenStyle);
+    class procedure CreateControls(AOwner: TWinControl); override;
+  end;
+
+  { TBrushProperty }
+
+  TBrushProperty = class(TAbstractProperty)
+  private
+    class var
+    FBrushColor: TBGRAPixel;
+    FBrushStyle: TBrushStyle;
+    class procedure BrushStyleChanged(Sender: TObject);
+    class procedure BrushColorChanged(Sender: TObject);
+    class procedure DrawComboBoxBrushItem(Control: TWinControl;
+      index: Integer; ARect: TRect; State: TOwnerDrawState);
+  public
+    class procedure SetDefaultProperties(AFigures: array of TFigure); override;
+    class procedure SetBrushColor(AColor: TColor);
+    class procedure SetBrushOpacity(AOpacity: Byte);
+    class procedure SetBrushStyle(AStyle: TBrushStyle);
+    class procedure CreateControls(AOwner: TWinControl);
+      override;
+  end;
+
+  { TRoundProperty }
+
+  TRoundProperty = class(TAbstractProperty)
+  private
+    class var FX, FY: Integer;
+    class procedure XChanged(Sender: TObject);
+    class procedure YChanged(Sender: TObject);
+  public
+    class procedure SetX(AX: Integer);
+    class procedure SetY(AY: Integer);
+    class procedure SetXY(AX, AY: Integer);
+    class procedure SetDefaultProperties(AFigures: array of TFigure); override;
+    class procedure CreateControls(AOwner: TWinControl);
+      override;
+  end;
+
+  { TRegularProperty }
+
+  TRegularProperty = class(TAbstractProperty)
+  private
+    class var FVertexes: Integer;
+    class procedure VertexesChanged(Sender: TObject);
+  public
+    class procedure SetVertexes(AVertexes: Integer);
+    class procedure SetDefaultProperties(AFigures: array of TFigure); override;
+    class procedure CreateControls(AOwner: TWinControl);
+      override;
+  end;
+
+  { TTextProperty }
+
+  TTextProperty = class(TAbstractProperty)
+    class procedure CreateControls(AOwner: TWinControl);
+      override;
+  end;
+
+  { TSprayProperty }
+
+  TSprayProperty = class(TAbstractProperty)
+  private
+    class var FSprayRadius, FSprayIntensity, FSeed: Integer;
+    class procedure IntensityChanged(Sender: TObject);
+    class procedure RadiusChanged(Sender: TObject);
+  public
+    class procedure SetDefaultProperties(AFigures: array of TFigure); override;
+    class procedure SetSpayIntensity(AIntensity: Integer);
+    class procedure SetSparyRadius(ARadius: Integer);
+    class procedure SetSpraySeed(ASeed: Integer);
+    class procedure CreateControls(AOwner: TWinControl);
+      override;
+  end;
+
+procedure Init;
+
 var
-  ctrllol: Integer;
+  ctrllol:     Integer;
+  ValidEvent:  TInvalidateEvent;
+  ChangeEvent: TChangeEvent;
 
 implementation
 
-uses MainForm;
-
 var
   lolpadding, i: Integer;
-  Ctrl:      TControl;
-  PenStyles: array [1..5] of TPenStyle;
-  BrushStyles: array [1..8] of TBrushStyle;
+  PenStyles:     array [0..4] of TPenStyle;
+  BrushStyles:   array [0..6] of TBrushStyle;
 
-{ DrawProperty }
-
-class procedure DrawProperty.CreateLabel(var AOwner: TWinControl; ACaption: String);
+procedure SetProps(AFigure: TFigure; APropName: String; AValue: Variant);
 begin
-  Ctrl := TLabel.Create(AOwner);
-  with Ctrl as TLabel do
+  if IsPublishedProp(AFigure, APropName) then
+    SetPropValue(AFigure, APropName, AValue);
+end;
+
+{ TAbstractProperty }
+
+class procedure TAbstractProperty.CreateLabel(AOwner: TWinControl; ACaption: String);
+begin
+  with TLabel.Create(AOwner) do
   begin
     Parent  := AOwner;
     Top     := 10 + ctrllol * 30;
@@ -65,18 +151,402 @@ begin
   end;
 end;
 
-class procedure DrawProperty.CreateFontComboBox(var AOwner: TWinControl);
+{ TPenProperty }
+
+class procedure TPenProperty.CreateControls(AOwner: TWinControl);
+var
+  i: Integer;
 begin
-  Self.CreateLabel(AOwner, 'Шрифт: ');
-  Ctrl := TComboBox.Create(AOwner);
-  with Ctrl as TComboBox do
+  Self.CreateLabel(AOwner, 'Тип кисти: ');
+  with TComboBox.Create(AOwner) do
+  begin
+    Parent   := AOwner;
+    Top      := 10 + ctrllol * 30;
+    Left     := 20 + lolpadding;
+    Width    := 130;
+    OnChange := @PenStyleChanged;
+    Style    := csOwnerDrawFixed;
+    ReadOnly := True;
+    OnDrawItem := @DrawComboBoxPenItem;
+    for i := 0 to 4 do
+      Items.Add('');
+    for i := 0 to 4 do
+      if PenStyles[i] = FPenStyle then
+        ItemIndex := i
+      else
+        ItemIndex := 0;
+    Name := 'PenComboBox';
+  end;
+  Inc(ctrllol);
+  Self.CreateLabel(AOwner, 'Толщина: ');
+  with TSpinEdit.Create(AOwner) do
+  begin
+    Parent   := AOwner;
+    Top      := 10 + ctrllol * 30;
+    Left     := 20 + lolpadding;
+    Width    := 130;
+    Value    := FPenSize;
+    OnChange := @PenSizeChanged;
+    Name     := 'PenSizeSpin';
+  end;
+  Inc(ctrllol);
+end;
+
+
+class procedure TPenProperty.SetPenColor(AColor: TColor);
+var
+  F: TFigure;
+begin
+  FPenColor := ColorToBGRA(AColor);
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'PenColor', BGRAToColor(FPenColor));
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TPenProperty.SetPenOpacity(AOpacity: Byte);
+var
+  F: TFigure;
+begin
+  FPenColor.alpha := AOpacity;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'PenOpacity', FPenColor.alpha);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TPenProperty.SetPenSize(ASize: float);
+var
+  F: TFigure;
+begin
+  FPenSize := ASize;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'PenSize', FPenSize);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TPenProperty.SetPenStyle(AStyle: TPenStyle);
+var
+  F: TFigure;
+begin
+  FPenStyle := AStyle;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'PenStyle', FPenStyle);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TPenProperty.PenSizeChanged(Sender: TObject);
+begin
+  with Sender as TSpinEdit do
+    Self.SetPenSize(Value);
+end;
+
+class procedure TPenProperty.PenStyleChanged(Sender: TObject);
+begin
+  with Sender as TComboBox do
+    Self.SetPenStyle(PenStyles[ItemIndex]);
+end;
+
+class procedure TPenProperty.PenColorChanged(Sender: TObject);
+begin
+
+end;
+
+class procedure TPenProperty.DrawComboBoxPenItem(Control: TWinControl;
+  index: Integer; ARect: TRect; State: TOwnerDrawState);
+begin
+  with (Control as TComboBox) do
+  begin
+    Canvas.FillRect(ARect);
+    Canvas.Pen.Style := PenStyles[index];
+    Canvas.Pen.Color := clBlack;
+    Canvas.Line(
+      ARect.Left, Arect.Top + (ARect.Bottom - ARect.Top) div 2,
+      ARect.Right, Arect.Top + (ARect.Bottom - ARect.Top) div 2
+      );
+  end;
+end;
+
+class procedure TPenProperty.SetDefaultProperties(AFigures: array of TFigure);
+var
+  F: TFigure;
+begin
+  for F in AFigures do
+  begin
+    if F.Selected then
+    begin
+      SetProps(F, 'PenColor', BGRAToColor(FPenColor));
+      SetProps(F, 'PenOpacity', FPenColor.alpha);
+      SetProps(F, 'PenSize', FPenSize);
+      SetProps(F, 'PenStyle', FPenStyle);
+    end;
+  end;
+  ValidEvent;
+end;
+
+{ TBrushProperty }
+
+class procedure TBrushProperty.CreateControls(AOwner: TWinControl);
+var
+  i: Integer;
+begin
+  Self.CreateLabel(AOwner, 'Тип заливки: ');
+  with TComboBox.Create(AOwner) do
   begin
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
     Width    := 115;
     Style    := csOwnerDrawFixed;
-    OnChange := @SetFontName;
+    ReadOnly := True;
+    OnChange := @BrushStyleChanged;
+    OnDrawItem := @DrawComboBoxBrushItem;
+    for i := 0 to 6 do
+      Items.Add('');
+    for i := 0 to 6 do
+      if BrushStyles[i] = FBrushStyle then
+        ItemIndex := i
+      else
+        ItemIndex := 0;
+    Name := 'BrushComboBox';
+  end;
+  Inc(ctrllol);
+end;
+
+class procedure TBrushProperty.SetBrushColor(AColor: TColor);
+var
+  F: TFigure;
+begin
+  FBrushColor := ColorToBGRA(AColor);
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'BrushColor', BGRAToColor(FBrushColor));
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TBrushProperty.SetBrushOpacity(AOpacity: Byte);
+var
+  F: TFigure;
+begin
+  FBrushColor.alpha := AOpacity;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'BrushOpacity', FBrushColor.alpha);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TBrushProperty.SetBrushStyle(AStyle: TBrushStyle);
+var
+  F: TFigure;
+begin
+  FBrushStyle := AStyle;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'BrushStyle', FBrushStyle);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TBrushProperty.BrushStyleChanged(Sender: TObject);
+begin
+  with Sender as TComboBox do
+    Self.SetBrushStyle(BrushStyles[ItemIndex]);
+end;
+
+class procedure TBrushProperty.BrushColorChanged(Sender: TObject);
+begin
+
+end;
+
+class procedure TBrushProperty.DrawComboBoxBrushItem(Control: TWinControl;
+  index: Integer; ARect: TRect; State: TOwnerDrawState);
+begin
+  with (Control as TComboBox) do
+  begin
+    Canvas.FillRect(ARect);
+    Canvas.Brush.Style := BrushStyles[index];
+    Canvas.Brush.Color := clblack;
+    Canvas.FillRect(ARect);
+  end;
+end;
+
+class procedure TBrushProperty.SetDefaultProperties(AFigures: array of TFigure);
+var
+  F: TFigure;
+begin
+  for F in AFigures do
+  begin
+    if F.Selected then
+    begin
+      SetProps(F, 'BrushColor', BGRAToColor(FBrushColor));
+      SetProps(F, 'BrushOpacity', FBrushColor.alpha);
+      SetProps(F, 'BrushStyle', FBrushStyle);
+    end;
+  end;
+end;
+
+{ TRoundProperty }
+
+class procedure TRoundProperty.CreateControls(AOwner: TWinControl);
+begin
+  Self.CreateLabel(AOwner, 'Скругление (Х, Y): ');
+  with TSpinEdit.Create(AOwner) do
+  begin
+    MinValue := 1;
+    MaxValue := 100;
+    Value    := FX;
+    Parent   := AOwner;
+    Top      := 10 + ctrllol * 30;
+    Left     := 20 + lolpadding;
+    Width    := 42;
+    lolpadding += Width;
+    OnChange := @XChanged;
+    Name     := 'RXSpinBox';
+  end;
+  with TSpinEdit.Create(AOwner) do
+  begin
+    MinValue := 1;
+    MaxValue := 100;
+    Value    := FY;
+    Parent   := AOwner;
+    Top      := 10 + ctrllol * 30;
+    Left     := 20 + lolpadding;
+    Width    := 41;
+    OnChange := @YChanged;
+    Name     := 'RYSpinBox';
+  end;
+  Inc(ctrllol);
+end;
+
+class procedure TRoundProperty.XChanged(Sender: TObject);
+begin
+  with Sender as TSpinEdit do
+    Self.SetX(Value);
+end;
+
+class procedure TRoundProperty.YChanged(Sender: TObject);
+begin
+  with Sender as TSpinEdit do
+    Self.SetY(Value);
+end;
+
+class procedure TRoundProperty.SetX(AX: Integer);
+var
+  F: TFigure;
+begin
+  FX := AX;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'RX', FX);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TRoundProperty.SetY(AY: Integer);
+var
+  F: TFigure;
+begin
+  FY := AY;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'RY', FY);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TRoundProperty.SetXY(AX, AY: Integer);
+begin
+  SetX(AX);
+  SetY(AY);
+end;
+
+class procedure TRoundProperty.SetDefaultProperties(AFigures: array of TFigure);
+var
+  F: TFigure;
+begin
+  for F in AFigures do
+  begin
+    if F.Selected then
+    begin
+      SetProps(F, 'RX', FX);
+      SetProps(F, 'RY', FY);
+    end;
+  end;
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+{ TRegularProperty }
+
+class procedure TRegularProperty.CreateControls(AOwner: TWinControl);
+begin
+  Self.CreateLabel(AOwner, 'Количество углов: ');
+  with TSpinEdit.Create(AOwner) do
+  begin
+    MinValue := 3;
+    MaxValue := 255;
+    Value    := FVertexes;
+    Parent   := AOwner;
+    Top      := 10 + ctrllol * 30;
+    Left     := 20 + lolpadding;
+    Width    := 85;
+    OnChange := @VertexesChanged;
+    Name     := 'AngleSpinBox';
+  end;
+  Inc(ctrllol);
+end;
+
+class procedure TRegularProperty.SetVertexes(AVertexes: Integer);
+var
+  F: TFigure;
+begin
+  FVertexes := AVertexes;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'Vertexes', FVertexes);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TRegularProperty.SetDefaultProperties(AFigures: array of TFigure);
+var
+  F: TFigure;
+begin
+  for F in AFigures do
+  begin
+    if F.Selected then
+    begin
+      SetProps(F, 'Vertexes', FVertexes);
+    end;
+  end;
+end;
+
+class procedure TRegularProperty.VertexesChanged(Sender: TObject);
+begin
+  with Sender as TSpinEdit do
+    Self.SetVertexes(Value);
+end;
+
+{ TTextProperty }
+
+class procedure TTextProperty.CreateControls(AOwner: TWinControl);
+begin
+  Self.CreateLabel(AOwner, 'Шрифт: ');
+  with TComboBox.Create(AOwner) do
+  begin
+    Parent := AOwner;
+    Top    := 10 + ctrllol * 30;
+    Left   := 20 + lolpadding;
+    Width  := 115;
+    Style  := csOwnerDrawFixed;
     Items.AddStrings(Screen.Fonts);
     ItemIndex := Items.IndexOf('Arial');
     (CurrentFigure^ as TTextFigure).FontName := 'Arial';
@@ -85,248 +555,136 @@ begin
   Inc(ctrllol);
 end;
 
-class procedure DrawProperty.CreateBrushComboBox(var AOwner: TWinControl);
-var
-  i: Integer;
-begin
-  Self.CreateLabel(AOwner, 'Тип заливки: ');
-  Ctrl := TComboBox.Create(AOwner);
-  with Ctrl as TComboBox do
-  begin
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 115;
-    Style    := csOwnerDrawFixed;
-    OnChange := @SetBrushStyle;
-    OnDrawItem := @DrawComboBoxBrushItem;
-    for i := 0 to High(BrushStyles) - 1 do Items.Add(IntToStr(i));
-    ItemIndex := 0;
-    Name      := 'BrushComboBox';
-  end;
-  Inc(ctrllol);
-end;
+{ TSprayProperty }
 
-class procedure DrawProperty.CreatePenComboBox(var AOwner: TWinControl);
-var
-  i: Integer;
+class procedure TSprayProperty.CreateControls(AOwner: TWinControl);
 begin
-  Self.CreateLabel(AOwner, 'Тип кисти: ');
-  Ctrl := TComboBox.Create(AOwner);
-  with Ctrl as TComboBox do
-  begin
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 130;
-    OnChange := @SetPenStyle;
-    Style    := csOwnerDrawFixed;
-    OnDrawItem := @DrawComboBoxPenItem;
-    for i := 0 to High(PenStyles) - 1 do Items.Add(IntToStr(i));
-    ItemIndex := 0;
-    Name      := 'PenComboBox';
-  end;
-  Inc(ctrllol);
-end;
-
-class procedure DrawProperty.CreatePenSpinBox(var AOwner: TWinControl);
-begin
-  Self.CreateLabel(AOwner, 'Толщина кисти: ');
-  Ctrl := TSpinEdit.Create(AOwner);
-  with Ctrl as TSpinEdit do
-  begin
-    MinValue := 1;
-    MaxValue := 300;
-    Value    := round(GPenSize);
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 98;
-    OnChange := @PenSizeChange;
-    Name     := 'PenSpinBox';
-  end;
-  Inc(ctrllol);
-end;
-
-class procedure DrawProperty.CreateAngleSpinBox(var AOwner: TWinControl);
-begin
-  Self.CreateLabel(AOwner, 'Количество углов: ');
-  Ctrl := TSpinEdit.Create(AOwner);
-  with Ctrl as TSpinEdit do
-  begin
-    MinValue := 3;
-    MaxValue := 255;
-    Value    := GAngleCount;
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 85;
-    OnChange := @AngleCountChange;
-    Name     := 'AngleSpinBox';
-  end;
-  Inc(ctrllol);
-end;
-
-class procedure DrawProperty.CreateRXRY(var AOwner: TWinControl);
-begin
-  Self.CreateLabel(AOwner, 'Скругление (Х, Y): ');
-  Ctrl := TSpinEdit.Create(AOwner);
-  with Ctrl as TSpinEdit do
+  TPenProperty.CreateControls(AOwner);
+  Self.CreateLabel(AOwner, 'Радиус: ');
+  with TSpinEdit.Create(AOwner) do
   begin
     MinValue := 1;
     MaxValue := 100;
-    Value    := GRoundX;
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 42;
-    lolpadding += Width;
-    OnChange := @RXChange;
-    Name     := 'RXSpinBox';
-  end;
-  Ctrl := TSpinEdit.Create(AOwner);
-  with Ctrl as TSpinEdit do
-  begin
-    MinValue := 1;
-    MaxValue := 100;
-    Value    := GRoundY;
+    Value    := FSprayRadius;
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
     Width    := 41;
-    OnChange := @RYChange;
-    Name     := 'RYSpinBox';
+    OnChange := @RadiusChanged;
+    Name     := 'RSprayRadius';
+  end;
+  Inc(ctrllol);
+  Self.CreateLabel(AOwner, 'Интенсивность: ');
+  with TSpinEdit.Create(AOwner) do
+  begin
+    MinValue := 10;
+    MaxValue := 1000;
+    Value    := FSprayIntensity;
+    Parent   := AOwner;
+    Top      := 10 + ctrllol * 30;
+    Left     := 20 + lolpadding;
+    Width    := 41;
+    OnChange := @IntensityChanged;
+    Name     := 'RSprayIntensity';
   end;
   Inc(ctrllol);
 end;
 
-class procedure DrawProperty.PenSizeChange(Sender: TObject);
+class procedure TSprayProperty.IntensityChanged(Sender: TObject);
 begin
-  GPenSize := (Sender as TSpinEdit).Value;
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'PenSize') then
-      SetPropValue(FiguresList[i], 'PenSize', GPenSize);
-  GreyDrawForm.ViewPort.Invalidate;
+  with Sender as TSpinEdit do
+    Self.SetSpayIntensity(Value);
 end;
 
-class procedure DrawProperty.AngleCountChange(Sender: TObject);
+class procedure TSprayProperty.RadiusChanged(Sender: TObject);
 begin
-  GAngleCount := (Sender as TSpinEdit).Value;
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'AngleCount') then
-      SetPropValue(FiguresList[i], 'AngleCount', GAngleCount);
-  GreyDrawForm.ViewPort.Invalidate;
+  with Sender as TSpinEdit do
+    Self.SetSparyRadius(Value);
 end;
 
-class procedure DrawProperty.SetPenStyle(Sender: TObject);
+class procedure TSprayProperty.SetDefaultProperties(AFigures: array of TFigure);
+var
+  F: TFigure;
 begin
-  GPenStyle := PenStyles[(Sender as TComboBox).ItemIndex + 1];
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'PenStyle') then
-      SetPropValue(FiguresList[i], 'PenStyle', GPenStyle);
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.SetPenColor(AColor: TColor);
-begin
-  GPenColor := ColorToBGRA(AColor);
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'PenColor') then
-      SetPropValue(FiguresList[i], 'PenColor', AColor);
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.SetFontName(Sender: TObject);
-begin
-  GFontName := (Sender as TComboBox).Caption;
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(CurrentFigure^, 'FontName') then
-      SetPropValue(FiguresList[i], 'FontName', GFontName);
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.SetFontStyle(Sender: TObject);
-begin
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.SetBrushStyle(Sender: TObject);
-begin
-  GBrushStyle := BrushStyles[(Sender as TComboBox).ItemIndex + 1];
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'BrushStyle') then
-      SetPropValue(FiguresList[i], 'BrushStyle', GBrushStyle);
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.SetBrushColor(AColor: TColor);
-begin
-  GBrushColor := ColorToBGRA(AColor);
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'BrushColor') then
-      SetPropValue(FiguresList[i], 'BrushColor', AColor);
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.RXChange(Sender: TObject);
-begin
-  GRoundX := (Sender as TSpinEdit).Value;
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'RX') then
-      SetPropValue(FiguresList[i], 'RX', GRoundX);
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.RYChange(Sender: TObject);
-begin
-  GRoundY := (Sender as TSpinEdit).Value;
-  for i := High(FiguresList) downto 0 do
-    if FiguresList[i].Selected and IsPublishedProp(FiguresList[i], 'RY') then
-      SetPropValue(FiguresList[i], 'RY', GRoundY);
-  GreyDrawForm.ViewPort.Invalidate;
-end;
-
-class procedure DrawProperty.DrawComboBoxPenItem(Control: TWinControl;
-  index: Integer; Rect: TRect; State: TOwnerDrawState);
-begin
-  with (Control as TComboBox).Canvas do
+  for F in AFigures do
   begin
-    Pen.Width   := 1;
-    Pen.Color   := clBlack;
-    Brush.Style := bsSolid;
-    Pen.Style   := PenStyles[index + 1];
-    FillRect(Rect);
-    Line(Rect.Left, (Rect.Top + Rect.Bottom) div 2,
-      Rect.Right, (Rect.Top + Rect.Bottom) div 2);
+    if F.Selected then
+    begin
+      SetProps(F, 'Intensity', FSprayIntensity);
+      SetProps(F, 'Radius', FSprayRadius);
+      SetProps(F, 'Seed', FSeed);
+    end;
   end;
 end;
 
-class procedure DrawProperty.DrawComboBoxBrushItem(Control: TWinControl;
-  index: Integer; Rect: TRect; State: TOwnerDrawState);
+class procedure TSprayProperty.SetSpayIntensity(AIntensity: Integer);
+var
+  F: TFigure;
 begin
-  with (Control as TComboBox).Canvas do
+  FSprayIntensity := AIntensity;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'Intensity', FSprayIntensity);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TSprayProperty.SetSparyRadius(ARadius: Integer);
+var
+  F: TFigure;
+begin
+  FSprayRadius := ARadius;
+  for F in FiguresList do
+    if F.Selected then
+      SetProps(F, 'Radius', FSprayRadius);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+class procedure TSprayProperty.SetSpraySeed(ASeed: Integer);
+begin
+  FSeed := Random(ASeed);
+  ChangeEvent(True);
+  ValidEvent;
+end;
+
+procedure Init;
+begin
+  with TPenProperty do
   begin
-    Pen.Style   := psClear;
-    Brush.Style := bsSolid;
-    FillRect(Rect);
-    Brush.Style := BrushStyles[index + 1];
-    if index <> 1 then Brush.Color := clBlack;
-    FillRect(Rect);
+    SetPenColor(clBlack);
+    SetPenOpacity(255);
+    SetPenSize(1);
+    SetPenStyle(psSolid);
   end;
+  with TBrushProperty do
+  begin
+    SetBrushColor(clWhite);
+    SetBrushOpacity(255);
+    SetBrushStyle(bsSolid);
+  end;
+  TRegularProperty.SetVertexes(3);
+  TRoundProperty.SetXY(5, 5);
+  with TSprayProperty do
+  begin
+    SetSpraySeed(591234);
+    SetSparyRadius(30);
+    SetSpayIntensity(50);
+  end;
+
 end;
 
 initialization
-  PenStyles[1]   := psSolid;
-  PenStyles[2]   := psDash;
-  PenStyles[3]   := psDot;
-  PenStyles[4]   := psDashDot;
-  PenStyles[5]   := psDashDotDot;
-  BrushStyles[1] := bsSolid;
-  BrushStyles[2] := bsClear;
-  BrushStyles[3] := bsHorizontal;
-  BrushStyles[4] := bsVertical;
-  BrushStyles[5] := bsFDiagonal;
-  BrushStyles[6] := bsBDiagonal;
-  BrushStyles[7] := bsCross;
-  BrushStyles[8] := bsDiagCross;
+  PenStyles[0]   := psSolid;
+  PenStyles[1]   := psDash;
+  PenStyles[2]   := psDot;
+  PenStyles[3]   := psDashDot;
+  PenStyles[4]   := psDashDotDot;
+  BrushStyles[0] := bsSolid;
+  BrushStyles[1] := bsHorizontal;
+  BrushStyles[2] := bsVertical;
+  BrushStyles[3] := bsFDiagonal;
+  BrushStyles[4] := bsBDiagonal;
+  BrushStyles[5] := bsCross;
+  BrushStyles[6] := bsDiagCross;
 end.
