@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Math, Types, Graphics, Dialogs, LCLIntf, LCLType,
-  typinfo, BGRABitmap, BGRABitmapTypes, Transformations, Utils;
+  typinfo, ExtCtrls, BGRABitmap, BGRABitmapTypes, Transformations, Utils;
 
 type
 
@@ -71,8 +71,10 @@ type
     procedure ChangePoint(APoint: TPointF); override;
     function IsSelected(X, Y: Integer): Boolean; override;
     function IsSelected(APoint: TPoint): Boolean; override;
+    class function IsSelected(APoint: TPointF; X, Y: Integer): Boolean;
     procedure SetPoint(APoint: PPointF);
     function GetPoint: TPointF;
+    function GetPointAddr: PPointF;
     procedure Draw(var ACanvas: TBGRABitmap); override;
   end;
 
@@ -169,6 +171,7 @@ type
     procedure DrawSelection(var ACanvas: TBGRABitmap); override;
     function Region: HRGN; override;
     function Rect: TRectF; override;
+    function WorldRect: TRectF; override;
   end;
 
   { TPolyline }
@@ -194,12 +197,12 @@ type
   TRegularPolygon = class(TBrushFigure)
   private
     FVertexes: Integer;
-    function CreatePoints: TPointFList;
   public
     function Rect: TRectF; override;
     procedure Draw(var ACanvas: TBGRABitmap); override;
     procedure DrawSelection(var ACanvas: TBGRABitmap); override;
     function Region: HRGN; override;
+    function CreatePoints: TPointFList;
   published
     property Vertexes: Integer read FVertexes write FVertexes;
   end;
@@ -245,11 +248,20 @@ type
     procedure Draw(var ACanvas: TBGRABitmap); override;
     procedure DrawSelection(var ACanvas: TBGRABitmap); override;
     function Region: HRGN; override;
-    function PointsCount: Integer; override;
+    //function PointsCount: Integer; override;
   published
     property Seed: Integer read FSeed write FSeed;
     property Intensity: Integer read FIntensity write FIntensity;
     property Radius: Integer read FRadius write FRadius;
+  end;
+
+  { TTimerInit }
+
+  TTimerInit = class
+  private
+    class procedure OnTimer(Sender: TObject);
+  public
+    class procedure Init;
   end;
 
 function BoundingRect(AFigures: TFigureList; Screen: Boolean = True): TRectF;
@@ -270,7 +282,9 @@ var
 implementation
 
 var
-  Texture: TBGRABitmap;
+  Texture:   TBGRABitmap;
+  JustTimer: TTimer;
+  Delta:     Integer = 0;
 
 { TSprayFigure }
 
@@ -296,8 +310,8 @@ begin
 end;
 
 procedure TSprayFigure.DrawSelection(var ACanvas: TBGRABitmap);
- //var
- //   R: TRect;
+var
+  R: TRect;
 begin
   //R := Self.Rect;
   //ACanvas.RectangleAntialias(R.Left, R.Top, R.Right, R.Bottom, SelectedColor, 1);
@@ -311,10 +325,10 @@ begin
   Result := CreateRectRgn(R.Left, R.Top, R.Right, R.Bottom);
 end;
 
-function TSprayFigure.PointsCount: Integer;
-begin
-  Result := 0
-end;
+ //function TSprayFigure.PointsCount: Integer;
+ //begin
+ //  Result := 0;
+ //end;
 
 { TVertexAnchor }
 
@@ -362,6 +376,12 @@ begin
     (abs(APoint.y - P.y) < DeltaOffset * 2);
 end;
 
+class function TVertexAnchor.IsSelected(APoint: TPointF; X, Y: Integer): Boolean;
+begin
+  Result :=
+    (abs(APoint.x - X) < DeltaOffset * 2) and (abs(APoint.y - Y) < DeltaOffset * 2);
+end;
+
 procedure TVertexAnchor.SetPoint(APoint: PPointF);
 begin
   FPoint := APoint;
@@ -370,6 +390,11 @@ end;
 function TVertexAnchor.GetPoint: TPointF;
 begin
   Result := FPoint^;
+end;
+
+function TVertexAnchor.GetPointAddr: PPointF;
+begin
+  Result := FPoint;
 end;
 
 procedure TVertexAnchor.Draw(var ACanvas: TBGRABitmap);
@@ -398,7 +423,7 @@ begin
     (Fpoints[1].y - FPoints[0].y) * (Fpoints[1].y - FPoints[0].y));
   if r = 0 then
     exit;
-  P := WorldToScreen(Self.CreatePoints);
+  P      := WorldToScreen(Self.CreatePoints);
   Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
@@ -615,16 +640,12 @@ var
   P: TPointFList;
   i: Integer;
 begin
-  P := WorldToScreen(FPoints);
+  P      := WorldToScreen(FPoints);
   Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
-    Result := RectF(
-      Min(Result.Left, P[i].x),
-      Min(Result.Top, P[i].y),
-      Max(Result.Right, P[i].x),
-      Max(Result.Bottom, P[i].y)
-    );
+    Result := RectF(Min(Result.Left, P[i].x), Min(Result.Top, P[i].y),
+      Max(Result.Right, P[i].x), Max(Result.Bottom, P[i].y));
   end;
 end;
 
@@ -832,7 +853,8 @@ end;
 
 procedure TLine.DrawSelection(var ACanvas: TBGRABitmap);
 var
-  P: TPointList;
+  i, j: Integer;
+  P:    TPointList;
 begin
   P := round(WorldToScreen(FPoints));
   ACanvas.PenStyle := psSolid;
@@ -926,6 +948,27 @@ begin
     Bottom := P[0].y;
     Right  := P[0].x;
   end;
+  for i := 0 to High(P) do
+  begin
+    Result.Top    := Min(Rect.Top, P[i].y);
+    Result.Left   := Min(Rect.Left, P[i].x);
+    Result.Bottom := Max(Rect.Bottom, P[i].y);
+    Result.Right  := Max(Rect.Right, P[i].x);
+  end;
+end;
+
+function TBezier.WorldRect: TRectF;
+var
+  P: TPointFList;
+  i: Integer;
+begin
+  with TBGRABitmap.Create do
+    try
+      P := ComputeOpenedSpline(FPoints, ssRoundOutside);
+    finally
+      Free;
+    end;
+  Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
     Result.Top    := Min(Rect.Top, P[i].y);
@@ -1107,6 +1150,25 @@ begin
 
 end;
 
+{ TTimerInit }
+
+const
+  Shift = 5;
+
+class procedure TTimerInit.OnTimer(Sender: TObject);
+begin
+  Delta += Shift;
+  ValidEvent;
+end;
+
+class procedure TTimerInit.Init;
+begin
+  JustTimer := TTimer.Create(nil);
+  JustTimer.Interval := 50;
+  JustTimer.OnTimer := @OnTimer;
+  JustTimer.Enabled := True;
+end;
+
 function BoundingRect(AFigures: TFigureList; Screen: Boolean): TRectF;
 var
   i: Integer;
@@ -1127,6 +1189,7 @@ begin
 end;
 
 initialization
+  TTimerInit.Init;
   AnchorsList := TCollection.Create(TVertexAnchor);
 
   RegisterClass(TFigure);

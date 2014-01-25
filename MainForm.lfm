@@ -1,7 +1,7 @@
 object GreyDrawForm: TGreyDrawForm
-  Left = 255
+  Left = 130
   Height = 735
-  Top = 169
+  Top = 102
   Width = 1262
   Caption = 'Untitled* – GreyDraw'
   ClientHeight = 0
@@ -1272,7 +1272,7 @@ object GreyDrawForm: TGreyDrawForm
     OnScroll = VScrollBarScroll
   end
   object MainMenu1: TMainMenu
-    left = 24
+    left = 32
     top = 344
     object FileMenu: TMenuItem
       Caption = 'File'
@@ -1398,6 +1398,14 @@ object GreyDrawForm: TGreyDrawForm
         }
         ShortCut = 16467
         OnClick = SaveFileButtonClick
+      end
+      object MenuItem1: TMenuItem
+        Caption = '-'
+      end
+      object ExportItem: TMenuItem
+        Caption = 'Export Image'
+        ShortCut = 16453
+        OnClick = ExportItemClick
       end
       object Sep1: TMenuItem
         Caption = '-'
@@ -1670,8 +1678,15 @@ object GreyDrawForm: TGreyDrawForm
   object FSDialog: TSaveDialog
     Title = 'Сохранить файл'
     DefaultExt = '.gdr'
+    FileName = 'Untitled.gdr'
     Filter = 'GreyDraw Image (*.gdr)|*.gdr|CryoDraw Image (*.cdr)|*.cdr'
     left = 32
     top = 544
+  end
+  object ExportDalog: TSaveDialog
+    FileName = 'Untitled.bmp'
+    Filter = 'Windows Bitmap|*.bmp|Portable Network Graphics|*.png|JPEG Image|*.jpg|Scalable Vector Graphics|*.svg'
+    left = 32
+    top = 296
   end
 end

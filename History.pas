@@ -5,7 +5,7 @@ unit History;
 interface
 
 uses
-  Classes, SysUtils, Dialogs;
+  Classes, SysUtils, Dialogs, Utils;
 
 procedure HistoryClear;
 procedure HistoryPush(AStr: String);
@@ -16,7 +16,7 @@ const
   HistoryLevel = 100;
 
 var
-  HistoryArray: array [0..HistoryLevel-1] of String;
+  HistoryArray: array [0..HistoryLevel - 1] of String;
 
 implementation
 
@@ -42,6 +42,8 @@ begin
   if (HI > 0) and (HI mod HistoryLevel <> HJ mod HistoryLevel + 1) then
     Dec(HI);
   Result := HistoryArray[abs(HI mod HistoryLevel)];
+  if HI = 0 then
+    ChangeEvent(False);
 end;
 
 function HistoryStepForward: String;

@@ -7,12 +7,9 @@ interface
 uses
   SysUtils, Classes, Drawable, LCLType, Controls, StdCtrls, ExtCtrls, Spin, Loaders,
   BGRABitmap, BGRABitmapTypes, Graphics, Forms, typinfo, jsonparser, History, Math,
-  variants;
+  variants, Utils;
 
 type
-
-  TInvalidateEvent = procedure of object;
-  TChangeEvent = procedure(AChanged: Boolean) of object;
 
   { TAbstractProperty }
 
@@ -120,9 +117,7 @@ type
 procedure Init;
 
 var
-  ctrllol:     Integer;
-  ValidEvent:  TInvalidateEvent;
-  ChangeEvent: TChangeEvent;
+  ctrllol: Integer;
 
 implementation
 
@@ -559,7 +554,7 @@ end;
 
 class procedure TSprayProperty.CreateControls(AOwner: TWinControl);
 begin
-  TPenProperty.CreateControls(AOwner);
+  //TPenProperty.CreateControls(AOwner);
   Self.CreateLabel(AOwner, 'Радиус: ');
   with TSpinEdit.Create(AOwner) do
   begin
@@ -569,7 +564,7 @@ begin
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
-    Width    := 41;
+    Width    := 100;
     OnChange := @RadiusChanged;
     Name     := 'RSprayRadius';
   end;
@@ -578,12 +573,12 @@ begin
   with TSpinEdit.Create(AOwner) do
   begin
     MinValue := 10;
-    MaxValue := 1000;
+    MaxValue := 300;
     Value    := FSprayIntensity;
     Parent   := AOwner;
     Top      := 10 + ctrllol * 30;
     Left     := 20 + lolpadding;
-    Width    := 41;
+    Width    := 100;
     OnChange := @IntensityChanged;
     Name     := 'RSprayIntensity';
   end;

@@ -9,6 +9,9 @@ uses
 
 type
 
+  TInvalidateEvent = procedure of object;
+  TChangeEvent = procedure(AChanged: Boolean) of object;
+
   { TRectF }
 
   TRectF = record
@@ -20,6 +23,7 @@ type
   TOffset = TPoint;
   TPointList = array of TPoint;
   TPointFList = array of TPointF;
+  TPPointFList = array of PPointF;
   TRectList = array of TRect;
   TRectFList = array of TRectF;
 
@@ -49,7 +53,9 @@ const
 var
   Offset, CursorPos: TOffset;
   ViewPortCenter: TPointF;
-  Scaling: Single = 1;
+  Scaling:     Single = 1;
+  ChangeEvent: TChangeEvent;
+  ValidEvent:  TInvalidateEvent;
 
 
 implementation

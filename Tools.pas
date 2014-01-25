@@ -207,6 +207,7 @@ end;
 
 class procedure TSprayTool.CreateControls(var AOwner: TWinControl);
 begin
+  ctrllol:=0;
   TSprayProperty.CreateControls(AOwner);
 end;
 
@@ -364,21 +365,134 @@ begin
 end;
 
 type
-  TSelectionState = (ssNone, ssOnPoint, ssOnFigure, ssMultiPoint, ssMultiFigure);
-  TMovementState = (msNone, msMoving);
+  TSelectionState = (ssNone, ssPoint, ssPoints);
+  TMovementState = (msNone, msMoved);
 
 var
   SelectState:   TSelectionState = ssNone;
   MovementState: TMovementState = msNone;
 
 class procedure TSelectTool.MouseDown(X, Y: Integer; Shift: TShiftState);
+var
+  i, j, k: Integer;
+  A: TVertexAnchor;
+  R: HRGN;
+  CurrentState: TSelectionState = ssNone;
+  BreakFlag: Boolean = False;
 begin
-
+  for i := High(FiguresList) downto 0 do
+    for j := FiguresList[i].PointsCount downto 0 do
+      if TVertexAnchor.IsSelected(FiguresList[i].GetPoint(j), X, Y) then
+        CurrentState := ssPoint;
+  if CurrentState = ssNone then
+    for i := High(FiguresList) downto 0 do
+    begin
+      R := FiguresList[i].Region;
+      try
+        if PtInRegion(R, X, Y) then
+          CurrentState := ssPoints;
+      finally
+        DeleteObject(R);
+      end;
+    end;
+  case CurrentState of
+    ssPoint:
+    begin
+      for i := AnchorsList.Count - 1 downto 0 do
+        with AnchorsList.Items[i] as TVertexAnchor do
+          if not (ssShift in Shift) then
+            Selected := IsSelected(X, Y)
+          else
+          if IsSelected(X, Y) then
+            Selected := True;
+    end;
+    ssPoints:
+    begin
+      if not (ssShift in Shift) then
+      begin
+        for i := High(FiguresList) downto 0 do
+          FiguresList[i].Selected := False;
+        AnchorsList.Clear;
+      end;
+      for i := High(FiguresList) downto 0 do
+      begin
+        R := FiguresList[i].Region;
+        try
+          if PtInRegion(R, X, Y) then
+          begin
+            if not FiguresList[i].Selected then
+            begin
+              FiguresList[i].Selected := True;
+              for j := FiguresList[i].PointsCount downto 0 do
+              begin
+                A := AnchorsList.Add as TVertexAnchor;
+                A.SetPoint(FiguresList[i].GetPointAddr(j));
+                A.Selected := True;
+              end;
+            end;
+            DeleteObject(R);
+            Break;
+          end;
+        finally
+          DeleteObject(R);
+        end;
+      end;
+    end;
+    ssNone:
+    begin
+      AnchorsList.Clear;
+      for i := High(FiguresList) downto 0 do
+        FiguresList[i].Selected := False;
+    end;
+  end;
+  SelectState   := CurrentState;
+  SelectionRect := Rect(X, Y, X, Y);
 end;
 
 class procedure TSelectTool.MouseMove(X, Y: Integer; Shift: TShiftState);
+var
+  i, j:  Integer;
+  A:     TVertexAnchor;
+  R:     HRGN;
+  CurrentState: TSelectionState = ssNone;
+  P, SP: TPointF;
 begin
-
+  if BMouseDown then
+  begin
+    SP := ScreenToWorld(X, Y);
+    if SelectState = ssNone then
+    begin
+      AnchorsList.Clear;
+      SelectionRect := Rect(SelectionRect.Left, SelectionRect.Top, X, Y);
+      for i := 0 to High(FiguresList) do
+      begin
+        R := FiguresList[i].Region;
+        try
+          FiguresList[i].Selected := RectInRegion(R, SelectionRect);
+        finally
+          DeleteObject(R);
+        end;
+      end;
+      for i := 0 to High(FiguresList) do
+        if FiguresList[i].Selected then
+          for j := 0 to FiguresList[i].PointsCount do
+          begin
+            A := AnchorsList.Add as TVertexAnchor;
+            A.SetPoint(FiguresList[i].GetPointAddr(j));
+            A.Selected := True;
+          end;
+    end
+    else
+      for i := 0 to AnchorsList.Count - 1 do
+        with AnchorsList.Items[i] as TVertexAnchor do
+          if Selected then
+          begin
+            P := GetPoint;
+            ChangePoint(P.x - DeltaP.x + SP.x, P.y - DeltaP.y + SP.y);
+            MovementState := msMoved;
+          end;
+  end;
+  inherited MouseMove(X, Y, Shift);
 end;
 
 class procedure TSelectTool.MouseUp(X, Y: Integer; Shift: TShiftState);
@@ -393,8 +507,39 @@ class procedure TSelectTool.MouseUp(X, Y: Integer; Shift: TShiftState);
       exit(GetLeastCommonClass(AFClass.ClassParent, ASClass.ClassParent));
   end;
 
+var
+  i, j: Integer;
+  lcc:  TClass = nil;
 begin
-
+  if (MovementState = msMoved) and (SelectState <> ssNone) then
+    ChangeEvent(True);
+  for i := 0 to High(FiguresList) do
+    if FiguresList[i].Selected then
+    begin
+      lcc := FiguresList[i].ClassType;
+      break;
+    end;
+  for i := 0 to High(FiguresList) do
+    if FiguresList[i].Selected then
+    begin
+      lcc := GetLeastCommonClass(lcc, FiguresList[i].ClassType);
+    end;
+  for i := GPanel.ControlCount - 1 downto 0 do
+    GPanel.Controls[i].Free;
+  if lcc <> nil then
+    TToolClass(GetClass(Concat(lcc.ClassName, 'Tool'))).CreateControls(
+      TWinControl(GPanel));
+  SelectionRect := Rect(0, 0, 0, 0);
+  if AnchorsList.Count = 0 then
+    SelectState := ssNone
+  else
+    SelectState := ssPoint;
+  for i := 0 to High(FiguresList) do
+    if FiguresList[i].Selected then
+      Inc(j);
+  if j > 1 then
+    SelectState := ssPoints;
+  MovementState := msNone;
 end;
 
 class function TSelectTool.Image: String;

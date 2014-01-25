@@ -6,9 +6,9 @@ interface
 
 uses
   SysUtils, Classes, Math, Graphics, Controls, Forms, Dialogs, ExtCtrls, Menus,
-  StdCtrls, Buttons, Grids, Spin, ActnList, typinfo, types, DrawComponents, FileUtil,
-  Clipbrd, fpjson, BGRABitmap, BGRABitmapTypes, Properties, Drawable, Utils,
-  Transformations, Tools, History, Loaders;
+  StdCtrls, Buttons, Grids, Spin, ActnList, typinfo, types, DrawComponents,
+  FileUtil, Clipbrd, ExtDlgs, fpjson, BGRABitmap, BGRABitmapTypes, Properties,
+  Drawable, Utils, Transformations, Tools, History, Loaders, GDExport;
 
 type
   { TGreyDrawForm }
@@ -70,6 +70,9 @@ type
     BrushColorPanel: TPanel;
     PenColorPanel: TPanel;
     ViewPort:  TPaintBox;
+    MenuItem1: TMenuItem;
+    ExportItem: TMenuItem;
+    ExportDalog: TSaveDialog;
     procedure AboutItemClick(Sender: TObject);
     procedure ActionExecute(Sender: TObject);
     procedure BrushColorPanelClick(Sender: TObject);
@@ -119,6 +122,7 @@ type
       var ScrollPos: Integer);
     procedure HScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
       var ScrollPos: Integer);
+    procedure ExportItemClick(Sender: TObject);
   end;
 
 const
@@ -130,6 +134,7 @@ var
   OpenedFile:   String = 'Untitled';
   FileLoader:   TFileLoader;
   FileSaver:    TFileSaver;
+  Exporter: TExporter;
   HasUnsavedChanges: Boolean;
 
 implementation
@@ -249,11 +254,18 @@ procedure TGreyDrawForm.NewFileButtonClick(Sender: TObject);
 var
   i: Integer;
 begin
-  for i := 0 to High(FiguresList) do
-    FiguresList[i].Destroy;
-  SetLength(FiguresList, 0);
-  HistoryClear;
-  ViewPort.Invalidate;
+  if HasUnsavedChanges then
+    if MessageDlg('Вы хотите отбросить имеющиеся изменения и создать новый файл?',
+      mtWarning, mbYesNo, 0) = mrYes then
+    begin
+      for i := 0 to High(FiguresList) do
+        FiguresList[i].Destroy;
+      SetLength(FiguresList, 0);
+      HistoryClear;
+      OpenedFile := 'Untitled';
+      ViewPort.Invalidate;
+      Self.ToggleChangeTag(True);
+    end;
 end;
 
 procedure TGreyDrawForm.PasteActionClick(Sender: TObject);
@@ -279,6 +291,7 @@ begin
   if FODialog.Execute then
   begin
     OpenedFile := FODialog.FileName;
+    Self.ToggleChangeTag(False);
     AssignFile(FFile, FODialog.FileName);
     Reset(FFile);
     ReadLn(FFile, CurrentMode);
@@ -422,9 +435,9 @@ var
   N: TPointF;
   c: float;
 begin
-  N.x := ViewPort.Width/abs(ScrollRect.Bottom - ScrollRect.Top);
-  N.y := ViewPort.Height/abs(ScrollRect.Right - ScrollRect.Left);
-  c := min(N.x, N.y);
+  N.x := ViewPort.Width / abs(ScrollRect.Bottom - ScrollRect.Top);
+  N.y := ViewPort.Height / abs(ScrollRect.Right - ScrollRect.Left);
+  c   := min(N.x, N.y);
   Self.SetScale(c);
   Self.SetScrollRect;
   ViewPort.Invalidate;
@@ -469,6 +482,7 @@ begin
   Self.CreateToolButtons;
   CurrentTool := TLineTool;
   Self.SetScrollRect;
+  GPanel := PropPanel;
   ViewPortCenter      := ScreenToWorld(ViewPort.Width div 2, ViewPort.Height div 2);
   Self.DoubleBuffered := True;
   PropPanel.DoubleBuffered := True;
@@ -583,7 +597,7 @@ end;
 
 function TGreyDrawForm.ScrollRect: TRectF;
 var
-  i: Integer;
+  i:    Integer;
   Rect: TRectF;
 begin
   with Result do
@@ -624,7 +638,7 @@ begin
     AScale := MaxScaleSize;
   if AScale < MinScaleSize then
     AScale := MinScaleSize;
-  Scaling := AScale;
+  Scaling  := AScale;
   SNormalBtn.Caption := Format('%3.1f%%', [AScale * 100]);
 end;
 
@@ -645,6 +659,7 @@ begin
     end;
     FileSaver(OpenedFile);
   end;
+  Self.ToggleChangeTag(False);
   Result := 1;
 end;
 
@@ -679,18 +694,35 @@ begin
   end;
 end;
 
-procedure TGreyDrawForm.VScrollBarScroll(Sender: TObject;
-  ScrollCode: TScrollCode; var ScrollPos: Integer);
+procedure TGreyDrawForm.VScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
+  var ScrollPos: Integer);
 begin
   Offset.y := -ScrollPos;
   ViewPort.Invalidate;
 end;
 
-procedure TGreyDrawForm.HScrollBarScroll(Sender: TObject;
-  ScrollCode: TScrollCode; var ScrollPos: Integer);
+procedure TGreyDrawForm.HScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
+  var ScrollPos: Integer);
 begin
   Offset.x := -ScrollPos;
   ViewPort.Invalidate;
+end;
+
+procedure TGreyDrawForm.ExportItemClick(Sender: TObject);
+begin
+  if ExportDalog.Execute then
+  begin
+    if FileExists(ExportDalog.FileName) then
+      if MessageDlg('Вы хотите перезаписать файл?', mtWarning, mbYesNo, 0) <> mrYes then
+        exit;
+    case ExportDalog.FilterIndex of
+      1: Exporter := @BMPExport;
+      2: Exporter := @PNGExport;
+      3: Exporter := @JPEGExport;
+      4: Exporter := @SVGExport;
+    end;
+    Exporter(ExportDalog.FileName);
+  end;
 end;
 
 initialization

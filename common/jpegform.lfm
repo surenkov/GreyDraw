@@ -1,0 +1,43 @@
+object JPEGQualitySelector: TJPEGQualitySelector
+  Left = 787
+  Height = 139
+  Top = 410
+  Width = 320
+  BorderStyle = bsDialog
+  Caption = 'Select Quality'
+  ClientHeight = 139
+  ClientWidth = 320
+  OnClose = FormClose
+  OnCreate = FormCreate
+  LCLVersion = '1.2.0.1'
+  object TrackBar1: TTrackBar
+    Left = 8
+    Height = 25
+    Top = 56
+    Width = 300
+    Max = 100
+    Min = 1
+    OnChange = TrackBar1Change
+    Position = 70
+    TickMarks = tmBoth
+    TickStyle = tsNone
+    TabOrder = 0
+  end
+  object Label1: TLabel
+    Left = 16
+    Height = 20
+    Top = 32
+    Width = 98
+    Caption = 'Качество: 70%'
+    ParentColor = False
+  end
+  object Button1: TButton
+    Left = 224
+    Height = 25
+    Top = 96
+    Width = 75
+    Caption = 'OK'
+    ModalResult = 1
+    TabOrder = 1
+  end
+end
