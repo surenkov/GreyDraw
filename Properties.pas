@@ -26,7 +26,7 @@ type
   private
     class var
     FPenColor: TBGRAPixel;
-    FPenSize:  float;
+    FPenSize: float;
     FPenStyle: TPenStyle;
     class procedure PenSizeChanged(Sender: TObject);
     class procedure PenStyleChanged(Sender: TObject);
@@ -123,8 +123,8 @@ implementation
 
 var
   lolpadding, i: Integer;
-  PenStyles:     array [0..4] of TPenStyle;
-  BrushStyles:   array [0..6] of TBrushStyle;
+  PenStyles: array [0..4] of TPenStyle;
+  BrushStyles: array [0..6] of TBrushStyle;
 
 procedure SetProps(AFigure: TFigure; APropName: String; AValue: Variant);
 begin
@@ -138,9 +138,9 @@ class procedure TAbstractProperty.CreateLabel(AOwner: TWinControl; ACaption: Str
 begin
   with TLabel.Create(AOwner) do
   begin
-    Parent  := AOwner;
-    Top     := 10 + ctrllol * 30;
-    Left    := 10;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 10;
     Caption := ACaption;
     lolpadding := Width;
   end;
@@ -155,12 +155,12 @@ begin
   Self.CreateLabel(AOwner, 'Тип кисти: ');
   with TComboBox.Create(AOwner) do
   begin
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 130;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 130;
     OnChange := @PenStyleChanged;
-    Style    := csOwnerDrawFixed;
+    Style := csOwnerDrawFixed;
     ReadOnly := True;
     OnDrawItem := @DrawComboBoxPenItem;
     for i := 0 to 4 do
@@ -176,13 +176,13 @@ begin
   Self.CreateLabel(AOwner, 'Толщина: ');
   with TSpinEdit.Create(AOwner) do
   begin
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 130;
-    Value    := FPenSize;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 130;
+    Value := FPenSize;
     OnChange := @PenSizeChanged;
-    Name     := 'PenSizeSpin';
+    Name := 'PenSizeSpin';
   end;
   Inc(ctrllol);
 end;
@@ -294,11 +294,11 @@ begin
   Self.CreateLabel(AOwner, 'Тип заливки: ');
   with TComboBox.Create(AOwner) do
   begin
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 115;
-    Style    := csOwnerDrawFixed;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 115;
+    Style := csOwnerDrawFixed;
     ReadOnly := True;
     OnChange := @BrushStyleChanged;
     OnDrawItem := @DrawComboBoxBrushItem;
@@ -397,26 +397,26 @@ begin
   begin
     MinValue := 1;
     MaxValue := 100;
-    Value    := FX;
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 42;
+    Value := FX;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 42;
     lolpadding += Width;
     OnChange := @XChanged;
-    Name     := 'RXSpinBox';
+    Name := 'RXSpinBox';
   end;
   with TSpinEdit.Create(AOwner) do
   begin
     MinValue := 1;
     MaxValue := 100;
-    Value    := FY;
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 41;
+    Value := FY;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 41;
     OnChange := @YChanged;
-    Name     := 'RYSpinBox';
+    Name := 'RYSpinBox';
   end;
   Inc(ctrllol);
 end;
@@ -488,13 +488,13 @@ begin
   begin
     MinValue := 3;
     MaxValue := 255;
-    Value    := FVertexes;
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 85;
+    Value := FVertexes;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 85;
     OnChange := @VertexesChanged;
-    Name     := 'AngleSpinBox';
+    Name := 'AngleSpinBox';
   end;
   Inc(ctrllol);
 end;
@@ -538,14 +538,14 @@ begin
   with TComboBox.Create(AOwner) do
   begin
     Parent := AOwner;
-    Top    := 10 + ctrllol * 30;
-    Left   := 20 + lolpadding;
-    Width  := 115;
-    Style  := csOwnerDrawFixed;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 115;
+    Style := csOwnerDrawFixed;
     Items.AddStrings(Screen.Fonts);
     ItemIndex := Items.IndexOf('Arial');
     (CurrentFigure^ as TTextFigure).FontName := 'Arial';
-    Name      := 'FontComboBox';
+    Name := 'FontComboBox';
   end;
   Inc(ctrllol);
 end;
@@ -560,13 +560,13 @@ begin
   begin
     MinValue := 1;
     MaxValue := 100;
-    Value    := FSprayRadius;
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 100;
+    Value := FSprayRadius;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 100;
     OnChange := @RadiusChanged;
-    Name     := 'RSprayRadius';
+    Name := 'RSprayRadius';
   end;
   Inc(ctrllol);
   Self.CreateLabel(AOwner, 'Интенсивность: ');
@@ -574,13 +574,13 @@ begin
   begin
     MinValue := 10;
     MaxValue := 300;
-    Value    := FSprayIntensity;
-    Parent   := AOwner;
-    Top      := 10 + ctrllol * 30;
-    Left     := 20 + lolpadding;
-    Width    := 100;
+    Value := FSprayIntensity;
+    Parent := AOwner;
+    Top := 10 + ctrllol * 30;
+    Left := 20 + lolpadding;
+    Width := 100;
     OnChange := @IntensityChanged;
-    Name     := 'RSprayIntensity';
+    Name := 'RSprayIntensity';
   end;
   Inc(ctrllol);
 end;
@@ -670,11 +670,11 @@ begin
 end;
 
 initialization
-  PenStyles[0]   := psSolid;
-  PenStyles[1]   := psDash;
-  PenStyles[2]   := psDot;
-  PenStyles[3]   := psDashDot;
-  PenStyles[4]   := psDashDotDot;
+  PenStyles[0] := psSolid;
+  PenStyles[1] := psDash;
+  PenStyles[2] := psDot;
+  PenStyles[3] := psDashDot;
+  PenStyles[4] := psDashDotDot;
   BrushStyles[0] := bsSolid;
   BrushStyles[1] := bsHorizontal;
   BrushStyles[2] := bsVertical;

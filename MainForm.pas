@@ -15,14 +15,14 @@ type
 
   TGreyDrawForm = class(TForm)
     DeleteButton: TSpeedButton;
-    Palette:   TDrawGrid;
+    Palette: TDrawGrid;
     UndoButton: TSpeedButton;
     RedoButton: TSpeedButton;
-    Sep1:      TMenuItem;
+    Sep1: TMenuItem;
     CutAction: TMenuItem;
     CopyAction: TMenuItem;
     DeleteAction: TMenuItem;
-    Sep2:      TMenuItem;
+    Sep2: TMenuItem;
     RedoAction: TMenuItem;
     UndoAction: TMenuItem;
     PasteAction: TMenuItem;
@@ -33,43 +33,43 @@ type
     SinkButton: TSpeedButton;
     SinkBottomButton: TSpeedButton;
     RaiseTopButton: TSpeedButton;
-    SaveItem:  TMenuItem;
-    OpenItem:  TMenuItem;
-    NewItem:   TMenuItem;
+    SaveItem: TMenuItem;
+    OpenItem: TMenuItem;
+    NewItem: TMenuItem;
     NormalScaleAction: TAction;
     MinusAction: TAction;
     EscapeAction: TAction;
-    FODialog:  TOpenDialog;
+    FODialog: TOpenDialog;
     PlusAction: TAction;
     FormActionList: TActionList;
-    BgDlg:     TColorDialog;
-    BdDlg:     TColorDialog;
-    FSDialog:  TSaveDialog;
+    BgDlg: TColorDialog;
+    BdDlg: TColorDialog;
+    FSDialog: TSaveDialog;
     SMinusBtn: TSpeedButton;
     NewFileButton: TSpeedButton;
     OpenFileButton: TSpeedButton;
     SaveFileButton: TSpeedButton;
-    SPlusBtn:  TSpeedButton;
+    SPlusBtn: TSpeedButton;
     SNormalBtn: TSpeedButton;
-    stub:      TPanel;
+    stub: TPanel;
     HScrollBar: TScrollBar;
     PropPanel: TPanel;
-    Shape1:    TShape;
-    Shape2:    TShape;
+    Shape1: TShape;
+    Shape2: TShape;
     VScrollBar: TScrollBar;
     ToolPropsPanel: TPanel;
     ToolsPanel: TPanel;
     PropsPanel: TPanel;
     ColorsPanel: TPanel;
     MainMenu1: TMainMenu;
-    FileMenu:  TMenuItem;
-    EditMenu:  TMenuItem;
-    HelpMenu:  TMenuItem;
-    ExitItem:  TMenuItem;
+    FileMenu: TMenuItem;
+    EditMenu: TMenuItem;
+    HelpMenu: TMenuItem;
+    ExitItem: TMenuItem;
     AboutItem: TMenuItem;
     BrushColorPanel: TPanel;
     PenColorPanel: TPanel;
-    ViewPort:  TPaintBox;
+    ViewPort: TPaintBox;
     MenuItem1: TMenuItem;
     ExportItem: TMenuItem;
     ExportDalog: TSaveDialog;
@@ -89,7 +89,6 @@ type
     procedure NewFileButtonClick(Sender: TObject);
     procedure PasteActionClick(Sender: TObject);
     procedure ExitItemClick(Sender: TObject);
-    procedure HScrollBarChange(Sender: TObject);
     procedure OpenFileButtonClick(Sender: TObject);
     procedure PenColorPanelClick(Sender: TObject);
     procedure RaiseButtonClick(Sender: TObject);
@@ -117,15 +116,14 @@ type
     procedure SetScrollRect;
     procedure SetScale(AScale: float);
     procedure SetExportFormats;
+    procedure SetSaveFormats;
     function SaveAction: Integer;
     function CanBeClosed: Boolean;
     procedure ToggleChangeTag(AChanged: Boolean);
-    procedure VScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
-      var ScrollPos: Integer);
-    procedure HScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
-      var ScrollPos: Integer);
     procedure ExportItemClick(Sender: TObject);
     procedure MenuItem3Click(Sender: TObject);
+    procedure HScrollBarChange(Sender: TObject);
+    procedure VScrollBarChange(Sender: TObject);
   end;
 
 const
@@ -134,9 +132,7 @@ const
 var
   GreyDrawForm: TGreyDrawForm;
   FirstBuffer, SecondBuffer: TBGRABitmap;
-  OpenedFile:   String = 'Untitled';
-  FileLoader:   TFileLoader;
-  FileSaver:    TFileSaver;
+  FormatIndex: Integer;
   HasUnsavedChanges: Boolean;
 
 implementation
@@ -178,7 +174,8 @@ begin
   j := TJSONObject.Create;
   for i := 0 to High(FiguresList) do
     if FiguresList[i].Selected then
-      j.Add(FiguresList[i].CreateUUID, GreyDrawSaveToJSONData(FiguresList[i]));
+      j.Add(FiguresList[i].CreateUUID, TGreyDrawFormat.SerializeToJSONData(
+        FiguresList[i]));
   Clipboard.AsText := j.FormatJSON();
   j.Destroy;
 end;
@@ -255,24 +252,27 @@ end;
 procedure TGreyDrawForm.NewFileButtonClick(Sender: TObject);
 var
   i: Integer;
+  F: Boolean = True;
 begin
-  if HasUnsavedChanges then
-    if MessageDlg('Вы хотите отбросить имеющиеся изменения и создать новый файл?',
-      mtWarning, mbYesNo, 0) = mrYes then
-    begin
-      for i := 0 to High(FiguresList) do
-        FiguresList[i].Destroy;
-      SetLength(FiguresList, 0);
-      HistoryClear;
-      OpenedFile := 'Untitled';
-      ViewPort.Invalidate;
-      Self.ToggleChangeTag(True);
-    end;
+  if HasUnsavedChanges and (MessageDlg(
+    'Вы хотите отбросить имеющиеся изменения и создать новый файл?',
+    mtWarning, mbYesNo, 0) <> mrYes) then
+    F := False;
+  if F then
+  begin
+    for i := 0 to High(FiguresList) do
+      FiguresList[i].Destroy;
+    SetLength(FiguresList, 0);
+    HistoryClear;
+    FileName := 'Untitled';
+    ViewPort.Invalidate;
+    Self.ToggleChangeTag(True);
+  end;
 end;
 
 procedure TGreyDrawForm.PasteActionClick(Sender: TObject);
 begin
-  GreyDrawLoadFromText(Clipboard.AsText);
+  TGreyDrawFormat.LoadFromString(Clipboard.AsText, False);
 end;
 
 procedure TGreyDrawForm.ExitItemClick(Sender: TObject);
@@ -283,34 +283,28 @@ end;
 procedure TGreyDrawForm.HScrollBarChange(Sender: TObject);
 begin
   Offset.x := -HScrollBar.Position;
+  //Self.SetScrollRect;
+  ViewPort.Invalidate;
+end;
+
+procedure TGreyDrawForm.VScrollBarChange(Sender: TObject);
+begin
+  Offset.y := -VScrollBar.Position;
+  //Self.SetScrollRect;
   ViewPort.Invalidate;
 end;
 
 procedure TGreyDrawForm.OpenFileButtonClick(Sender: TObject);
 var
-  FFile: Text;
+  i: Integer;
 begin
   if FODialog.Execute then
   begin
-    OpenedFile := FODialog.FileName;
+    FileName := FODialog.FileName;
+    FormatIndex := FODialog.FilterIndex - 1;
     Self.ToggleChangeTag(False);
-    AssignFile(FFile, FODialog.FileName);
-    Reset(FFile);
-    ReadLn(FFile, CurrentMode);
-    case CurrentMode of
-      'CryoDraw vector image ver.3':
-      begin
-        FileLoader := @CryoDrawLoadFromFile;
-        FileSaver  := @CryoDrawSaveToFile;
-      end
-      else
-      begin
-        FileLoader := @GreyDrawLoadFromFile;
-        FileSaver  := @GreyDrawSaveToFile;
-      end
-    end;
-    CloseFile(FFile);
-    FileLoader(OpenedFile);
+      if FormatList[FormatIndex].TestLoadFile(FileName) then
+        FormatList[FormatIndex].LoadFromFile(FileName);
     HistoryClear;
   end;
 end;
@@ -343,7 +337,7 @@ end;
 
 procedure TGreyDrawForm.RaiseTopButtonClick(Sender: TObject);
 var
-  i:    Integer = 0;
+  i: Integer = 0;
   j, k: Integer;
 begin
   for i := 0 to High(FiguresList) do
@@ -368,7 +362,7 @@ end;
 
 procedure TGreyDrawForm.RedoActionClick(Sender: TObject);
 begin
-  GreyDrawLoadFromText(HistoryStepForward, True);
+  TGreyDrawFormat.LoadFromString(HistoryStepForward, True);
   AnchorsList.Clear;
 end;
 
@@ -443,7 +437,7 @@ begin
   Offset.y := -R.Top;
   N.x := ViewPort.Height / abs(R.Bottom - R.Top);
   N.y := ViewPort.Width / abs(R.Right - R.Left);
-  c   := min(N.x, N.y);
+  c := min(N.x, N.y);
   Self.SetScale(c);
   Self.SetScrollRect;
   ViewPort.Invalidate;
@@ -483,7 +477,7 @@ end;
 procedure TGreyDrawForm.FormCreate(Sender: TObject);
 begin
   FirstBuffer := TBGRABitmap.Create(ClientWidth, ClientHeight, BGRAWhite);
-  ValidEvent  := @ViewPort.Invalidate;
+  ValidEvent := @ViewPort.Invalidate;
   ChangeEvent := @ToggleChangeTag;
   Self.CreateToolButtons;
   Self.SetExportFormats;
@@ -499,7 +493,7 @@ end;
 
 procedure TGreyDrawForm.UndoActionClick(Sender: TObject);
 begin
-  GreyDrawLoadFromText(HistoryStepBack, True);
+  TGreyDrawFormat.LoadFromString(HistoryStepBack, True);
   AnchorsList.Clear;
 end;
 
@@ -516,7 +510,8 @@ procedure TGreyDrawForm.ViewPortMouseMove(Sender: TObject; Shift: TShiftState;
 begin
   CursorPos := Point(X, Y);
   CurrentTool.MouseMove(X, Y, Shift);
-  Self.SetScrollRect;
+  if BMouseDown then
+    Self.SetScrollRect;
   ViewPort.Invalidate;
 end;
 
@@ -526,7 +521,7 @@ begin
   BMouseDown := False;
   CurrentTool.MouseUp(X, Y, Shift);
   if CurrentTool.ClassParent <> TTool then
-    HistoryPush(GreyDrawSaveToText);
+    HistoryPush(TGreyDrawFormat.SaveToString);
   ViewPort.Invalidate;
 end;
 
@@ -571,14 +566,13 @@ procedure TGreyDrawForm.ViewPortResize(Sender: TObject);
 begin
   VScrollBar.PageSize := ViewPort.Height;
   HScrollBar.PageSize := ViewPort.Width;
-  CursorPos := Point(ViewPort.Width div 2, ViewPort.Height div 2);
   Self.SetScrollRect;
   ViewPort.Invalidate;
 end;
 
 procedure TGreyDrawForm.CreateToolButtons;
 var
-  i:      Integer;
+  i: Integer;
   Button: TToolButton;
 begin
   for i := 0 to High(FigureToolsList) do
@@ -586,18 +580,18 @@ begin
     Button := TToolButton.Create(ToolsPanel);
     with Button do
     begin
-      Parent   := ToolsPanel;
-      Height   := 30;
-      Width    := 30;
-      Left     := 15;
-      Top      := i * Height + (i + 1) * Left;
-      Name     := FigureToolsList[i].ClassName();
-      Glyph    := LoadImage(FigureToolsList[i].Image);
-      Hint     := FigureToolsList[i].Hint;
-      Tool     := FigureToolsList[i];
+      Parent := ToolsPanel;
+      Height := 30;
+      Width := 30;
+      Left := 15;
+      Top := i * Height + (i + 1) * Left;
+      Name := FigureToolsList[i].ClassName();
+      Glyph := LoadImage(FigureToolsList[i].Image);
+      Hint := FigureToolsList[i].Hint;
+      Tool := FigureToolsList[i];
       ShowHint := True;
+      OnClick := @ToolButtonClick;
       DoubleBuffered := True;
-      OnClick  := @ToolButtonClick;
     end;
   end;
 end;
@@ -606,21 +600,28 @@ procedure TGreyDrawForm.SetScrollRect;
 var
   R: TRectF;
 begin
-  R := ScrollRect;
-  HScrollBar.SetParams(HScrollBar.Position, trunc(R.Left), ceil(R.Right));
-  VScrollBar.SetParams(VScrollBar.Position, trunc(R.Top), ceil(R.Bottom));
-  HScrollBar.Visible := abs(HScrollBar.Max - HScrollBar.Min) > ViewPort.Width;
-  VScrollBar.Visible := abs(VScrollBar.Max - VScrollBar.Min) > ViewPort.Height;
-  stub.Visible := HScrollBar.Visible or VScrollBar.Visible;
+  R := ScrollRect(RectF(0, 0, ViewPort.Width, ViewPort.Height));
+  with HScrollBar do
+  begin
+    Min := trunc(R.Left);
+    Max := ceil(R.Right);
+    Enabled := abs(Max - Min) > ViewPort.Width;
+  end;
+  with VScrollBar do
+  begin
+    Min := trunc(R.Top);
+    Max := ceil(R.Bottom);
+    Enabled := abs(Max - Min) > ViewPort.Height;
+  end;
 end;
 
 procedure TGreyDrawForm.SetScale(AScale: float);
 begin
-  if AScale > MaxScaleSize then
-    AScale := MaxScaleSize;
-  if AScale < MinScaleSize then
-    AScale := MinScaleSize;
-  Scaling  := AScale;
+  if AScale > MaxScale then
+    AScale := MaxScale;
+  if AScale < MinScale then
+    AScale := MinScale;
+  Scaling := AScale;
   SNormalBtn.Caption := Format('%3.1f%%', [AScale * 100]);
 end;
 
@@ -630,24 +631,40 @@ var
 begin
   for i := 0 to High(ExporterList) do
     ExportDalog.Filter := Concat(ExportDalog.Filter, ExporterList[i].FormatString, '|');
-  ExportDalog.Filter:=Copy(ExportDalog.Filter, 0, Length(ExportDalog.Filter) - 1);
+  ExportDalog.Filter := Copy(ExportDalog.Filter, 0, Length(ExportDalog.Filter) - 1);
+end;
+
+procedure TGreyDrawForm.SetSaveFormats;
+var
+  i: Integer;
+begin
+  for i := 0 to High(FormatList) do
+    FODialog.Filter := Concat(FODialog.Filter, FormatList[i].FormatString, '|');
+  FODialog.Filter := Copy(FODialog.Filter, 0, Length(FODialog.Filter) - 1);
+  FSDialog.Filter := FODialog.Filter;
 end;
 
 function TGreyDrawForm.SaveAction: Integer;
 begin
-  if FileExists(OpenedFile) then
-    GreyDrawSaveToFile(OpenedFile)
-  else if FSDialog.Execute then
+  if FileExists(FileName) then
+  begin
+      if FormatList[FormatIndex].TestSaveFile(FileName) then
+      begin
+        FormatList[FormatIndex].SaveToFile(FileName);
+        Self.ToggleChangeTag(False);
+        exit(1);
+      end;
+  end;
+  if FSDialog.Execute then
   begin
     if FileExists(FSDialog.FileName) then
-      if MessageDlg('Вы хотите перезаписать файл?', mtWarning, mbYesNo, 0) <> mrYes then
+      if MessageDlg('Вы хотите перезаписать файл?', mtWarning, mbYesNo, 0) <>
+        mrYes then
         exit(0);
-    OpenedFile := FSDialog.FileName;
-    case FSDialog.FilterIndex of
-      1: FileSaver := @GreyDrawSaveToFile;
-      2: FileSaver := @CryoDrawSaveToFile;
-    end;
-    FileSaver(OpenedFile);
+    FileName := FSDialog.FileName;
+    FormatIndex := FSDialog.FilterIndex - 1;
+    if FormatList[FormatIndex].TestSaveFile(FileName) then
+      FormatList[FormatIndex].SaveToFile(FileName);
   end;
   Self.ToggleChangeTag(False);
   Result := 1;
@@ -660,11 +677,11 @@ begin
   Result := False;
   if HasUnsavedChanges then
     case MessageDlg('Сохранить изменения?',
-        Concat('Сохранить изменения в "', OpenedFile, '" перед закрытием?'),
+        Concat('Сохранить изменения в "', FileName, '" перед закрытием?'),
         mtWarning, mbYesNoCancel, 0, mbCancel)
-    of
+      of
       mrYes: if SaveAction = 1 then
-          Result   := True;
+          Result := True;
       mrNo: Result := True;
     end
   else
@@ -675,28 +692,14 @@ procedure TGreyDrawForm.ToggleChangeTag(AChanged: Boolean);
 begin
   if AChanged then
   begin
-    Self.Caption      := Concat(ChangesTag, ' ', OpenedFile, ' - GreyDraw');
+    Self.Caption := Concat(ChangesTag, ' ', FileName, ' - GreyDraw');
     HasUnsavedChanges := True;
   end
   else
   begin
-    Self.Caption      := Concat(OpenedFile, ' - GreyDraw');
+    Self.Caption := Concat(FileName, ' - GreyDraw');
     HasUnsavedChanges := False;
   end;
-end;
-
-procedure TGreyDrawForm.VScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
-  var ScrollPos: Integer);
-begin
-  Offset.y := -ScrollPos;
-  ViewPort.Invalidate;
-end;
-
-procedure TGreyDrawForm.HScrollBarScroll(Sender: TObject; ScrollCode: TScrollCode;
-  var ScrollPos: Integer);
-begin
-  Offset.x := -ScrollPos;
-  ViewPort.Invalidate;
 end;
 
 procedure TGreyDrawForm.ExportItemClick(Sender: TObject);
@@ -709,7 +712,7 @@ begin
       if MessageDlg('Вы хотите перезаписать файл?', mtWarning, mbYesNo, 0) <> mrYes then
         exit;
     for i := 0 to High(ExporterList) do
-      if ExporterList[i].TestFormat(ExportDalog.FileName) then
+      if ExporterList[i].TestFile(ExportDalog.FileName) then
       begin
         ExporterList[i].ExportData(ExportDalog.FileName);
         Break;
@@ -719,8 +722,8 @@ end;
 
 procedure TGreyDrawForm.MenuItem3Click(Sender: TObject);
 var
-  F:   TFigure;
-  A:   TVertexAnchor;
+  F: TFigure;
+  A: TVertexAnchor;
   Sel: Boolean = True;
   i: Integer;
 begin

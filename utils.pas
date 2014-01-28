@@ -47,20 +47,21 @@ function PointF(APoint: TPoint): TPointF; overload;
 function LoadImage(AName: String; AType: TCtrlType = ctButton): TBitmap;
 
 const
-  MinScaleSize = 0.001;
-  MaxScaleSize = 68;
+  MinScale = 0.001;
+  MaxScale = 68;
 
   GDEName = 'GreyDraw Editor';
-  GDEVersion = '0.0.6';
-  CurrentGDFSign    = 'GDFImage';
-  CurrentGDFVersion = '0.0.1';
+  GDEVersion = '0.0.7';
+
+  GDFSign = 'GDFImage';
+  GDFVersion = '0.0.1';
 
 var
   Offset, CursorPos: TOffset;
   ViewPortCenter: TPointF;
-  Scaling:     Single = 1;
+  Scaling: Single = 1;
   ChangeEvent: TChangeEvent;
-  ValidEvent:  TInvalidateEvent;
+  ValidEvent: TInvalidateEvent;
 
 
 implementation
@@ -87,13 +88,13 @@ const
 
 function rand(ARange: Integer; var seed: Integer): Integer;
 begin
-  seed   := (a * seed + c) mod m;
+  seed := (a * seed + c) mod m;
   Result := seed mod ARange;
 end;
 
 function rand(AStart, AEnd: Integer; var seed: Integer): Integer;
 begin
-  seed   := (a * seed + c) mod m;
+  seed := (a * seed + c) mod m;
   Result := AStart + (seed mod (AEnd - AStart));
 end;
 
@@ -101,9 +102,9 @@ function RectF(ALeft, ATop, ARight, ABottom: float): TRectF;
 begin
   with Result do
   begin
-    Left   := ALeft;
-    Top    := ATop;
-    Right  := ARight;
+    Left := ALeft;
+    Top := ATop;
+    Right := ARight;
     Bottom := ABottom;
   end;
 end;
@@ -147,14 +148,14 @@ end;
 function LoadImage(AName: String; AType: TCtrlType): TBitmap;
 var
   PNGImage: TPortableNetworkGraphic;
-  CtrlDir:  String;
+  CtrlDir: String;
 begin
   case AType of
     ctButton: CtrlDir := 'Buttons';
-    ctPanel: CtrlDir  := 'Panels';
+    ctPanel: CtrlDir := 'Panels';
   end;
   PNGImage := TPortableNetworkGraphic.Create();
-  CtrlDir  := 'Images\' + CtrlDir + '\' + AName;
+  CtrlDir := 'Images\' + CtrlDir + '\' + AName;
   PNGImage.LoadFromFile(CtrlDir);
   Result := TBitmap.Create();
   Result.Assign(PNGImage);
@@ -164,18 +165,18 @@ end;
 
 class operator TRectF.Implicit(a: TRect): TRectF;
 begin
-  Result.Top    := a.Top;
-  Result.Left   := a.Left;
+  Result.Top := a.Top;
+  Result.Left := a.Left;
   Result.Bottom := a.Bottom;
-  Result.Right  := a.Right;
+  Result.Right := a.Right;
 end;
 
 class operator TRectF.Implicit(a: TRectF): TRect;
 begin
-  Result.Top    := round(a.Top);
-  Result.Left   := round(a.Left);
+  Result.Top := round(a.Top);
+  Result.Left := round(a.Left);
   Result.Bottom := round(a.Bottom);
-  Result.Right  := round(a.Right);
+  Result.Right := round(a.Right);
 end;
 
 end.

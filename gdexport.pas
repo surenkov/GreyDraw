@@ -13,50 +13,48 @@ type
   { TExporter }
 
   TExporter = class(TPersistent)
-    class function TestFormat(AFileName: String): Boolean; virtual; abstract;
-    class function ExportData(AFileNAme: String): Boolean; virtual; abstract;
-    class function FormatString: String; virtual; abstract;
+    function TestFile(AFileName: String): Boolean; virtual; abstract;
+    function ExportData(AFileNAme: String): Boolean; virtual; abstract;
+    function FormatString: String; virtual; abstract;
   end;
 
   TExporterClass = class of TExporter;
-  TExporterList = array of TExporterClass;
+  TExporterList = array of TExporter;
 
   { TBMPExporter }
 
   TBMPExporter = class(TExporter)
-    class function TestFormat(AFileName: String): Boolean; override;
-    class function ExportData(AFileNAme: String): Boolean; override;
-    class function FormatString: String; override;
+    function TestFile(AFileName: String): Boolean; override;
+    function ExportData(AFileNAme: String): Boolean; override;
+    function FormatString: String; override;
   end;
 
   { TJpegExporter }
 
   TJpegExporter = class(TExporter)
-    class function TestFormat(AFileName: String): Boolean; override;
-    class function ExportData(AFileNAme: String): Boolean; override;
-    class function FormatString: String; override;
+    function TestFile(AFileName: String): Boolean; override;
+    function ExportData(AFileNAme: String): Boolean; override;
+    function FormatString: String; override;
   end;
 
   { TPNGExporter }
 
   TPNGExporter = class(TExporter)
-    class function TestFormat(AFileName: String): Boolean; override;
-    class function ExportData(AFileNAme: String): Boolean; override;
-    class function FormatString: String; override;
+    function TestFile(AFileName: String): Boolean; override;
+    function ExportData(AFileNAme: String): Boolean; override;
+    function FormatString: String; override;
   end;
 
   { TSVGExporter }
 
   TSVGExporter = class(TExporter)
-    class function TestFormat(AFileName: String): Boolean; override;
-    class function ExportData(AFileNAme: String): Boolean; override;
-    class function FormatString: String; override;
+    function TestFile(AFileName: String): Boolean; override;
+    function ExportData(AFileNAme: String): Boolean; override;
+    function FormatString: String; override;
   private
-    class function FigureToSVGElement(AFigure: TFigure): String;
-    class function PropertyToSVGAttribute(AFigure: TFigure; APropName: String): String;
+    function FigureToSVGElement(AFigure: TFigure): String;
+    function PropertyToSVGAttribute(AFigure: TFigure; APropName: String): String;
   end;
-
-procedure RegisterExporter(AExporter: TExporterClass);
 
 var
   ExporterList: TExporterList;
@@ -94,18 +92,18 @@ end;
 procedure RegisterExporter(AExporter: TExporterClass);
 begin
   SetLength(ExporterList, Length(ExporterList) + 1);
-  ExporterList[High(ExporterList)] := AExporter;
+  ExporterList[High(ExporterList)] := AExporter.Create;
   RegisterClass(AExporter);
 end;
 
 { TBMPExporter }
 
-class function TBMPExporter.TestFormat(AFileName: String): Boolean;
+function TBMPExporter.TestFile(AFileName: String): Boolean;
 begin
   Result := AnsiLowerCase(ExtractFileExt(AFileName)) = '.bmp';
 end;
 
-class function TBMPExporter.ExportData(AFileNAme: String): Boolean;
+function TBMPExporter.ExportData(AFileNAme: String): Boolean;
 var
   bmp: TBitmap;
 begin
@@ -126,19 +124,19 @@ begin
     end;
 end;
 
-class function TBMPExporter.FormatString: String;
+function TBMPExporter.FormatString: String;
 begin
   Result:= 'Windows Bitmap|*.bmp';
 end;
 
 { TJpegExporter }
 
-class function TJpegExporter.TestFormat(AFileName: String): Boolean;
+function TJpegExporter.TestFile(AFileName: String): Boolean;
 begin
   Result := AnsiLowerCase(ExtractFileExt(AFileName)) = '.jpg';
 end;
 
-class function TJpegExporter.ExportData(AFileNAme: String): Boolean;
+function TJpegExporter.ExportData(AFileNAme: String): Boolean;
 var
   jpg: TJPEGImage;
 begin
@@ -164,19 +162,19 @@ begin
     end;
 end;
 
-class function TJpegExporter.FormatString: String;
+function TJpegExporter.FormatString: String;
 begin
   Result := 'JPEG Image|*.jpg';
 end;
 
 { TPNGExporter }
 
-class function TPNGExporter.TestFormat(AFileName: String): Boolean;
+function TPNGExporter.TestFile(AFileName: String): Boolean;
 begin
   Result := AnsiLowerCase(ExtractFileExt(AFileName)) = '.png';
 end;
 
-class function TPNGExporter.ExportData(AFileNAme: String): Boolean;
+function TPNGExporter.ExportData(AFileNAme: String): Boolean;
 begin
   with DrawOnBitmap do
     try
@@ -186,7 +184,7 @@ begin
     end;
 end;
 
-class function TPNGExporter.FormatString: String;
+function TPNGExporter.FormatString: String;
 begin
   Result := 'Portable Network Graphics|*.png';
 end;
@@ -199,12 +197,12 @@ const
   SVGRootOpen = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="%gpx" height="%gpx" xml:space="preserve">';
   SGRootClose = '</svg>';
 
-class function TSVGExporter.TestFormat(AFileName: String): Boolean;
+function TSVGExporter.TestFile(AFileName: String): Boolean;
 begin
   Result := AnsiLowerCase(ExtractFileExt(AFileName)) = '.svg';
 end;
 
-class function TSVGExporter.ExportData(AFileNAme: String): Boolean;
+function TSVGExporter.ExportData(AFileNAme: String): Boolean;
 var
   SVGFile: Text;
   R: TRectF;
@@ -229,12 +227,12 @@ begin
   CloseFile(SVGFile);
 end;
 
-class function TSVGExporter.FormatString: String;
+function TSVGExporter.FormatString: String;
 begin
   Result := 'Scalable Vector Graphics|*.svg';
 end;
 
-class function TSVGExporter.FigureToSVGElement(AFigure: TFigure): String;
+function TSVGExporter.FigureToSVGElement(AFigure: TFigure): String;
 begin
   Result := '<';
   case AFigure.ClassName of
@@ -257,7 +255,7 @@ begin
   Result   := Concat(Result, ' />');
 end;
 
-class function TSVGExporter.PropertyToSVGAttribute(AFigure: TFigure;
+function TSVGExporter.PropertyToSVGAttribute(AFigure: TFigure;
   APropName: String): String;
 var
   P: TPointFList;

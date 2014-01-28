@@ -191,8 +191,8 @@ procedure RegisterTool(AClass: TToolClass);
 implementation
 
 var
-  index:     Integer;
-  DeltaP:    TPointF;
+  index: Integer;
+  DeltaP: TPointF;
   JustTimer: TTimer;
 
 
@@ -207,7 +207,7 @@ end;
 
 class procedure TSprayTool.CreateControls(var AOwner: TWinControl);
 begin
-  ctrllol:=0;
+  ctrllol := 0;
   TSprayProperty.CreateControls(AOwner);
 end;
 
@@ -216,9 +216,9 @@ begin
   Self.CreateFigure;
   inherited MouseDown(X, Y, Shift);
   CurrentFigure^.AddPoint(X, Y);
-  JustTimer.OnTimer  := @OnTimer;
+  JustTimer.OnTimer := @OnTimer;
   JustTimer.Interval := 10;
-  JustTimer.Enabled  := True;
+  JustTimer.Enabled := True;
 end;
 
 class procedure TSprayTool.MouseMove(X, Y: Integer; Shift: TShiftState);
@@ -242,7 +242,7 @@ end;
 class procedure TSprayTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TSprayFigure.Create;
   inherited CreateFigure;
   TSprayProperty.SetDefaultProperties(FiguresList);
@@ -341,7 +341,7 @@ end;
 class procedure TRegularPolygonTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TRegularPolygon.Create;
   inherited CreateFigure;
   TRegularProperty.SetDefaultProperties(FiguresList);
@@ -369,7 +369,7 @@ type
   TMovementState = (msNone, msMoved);
 
 var
-  SelectState:   TSelectionState = ssNone;
+  SelectState: TSelectionState = ssNone;
   MovementState: TMovementState = msNone;
 
 class procedure TSelectTool.MouseDown(X, Y: Integer; Shift: TShiftState);
@@ -445,15 +445,15 @@ begin
         FiguresList[i].Selected := False;
     end;
   end;
-  SelectState   := CurrentState;
+  SelectState := CurrentState;
   SelectionRect := Rect(X, Y, X, Y);
 end;
 
 class procedure TSelectTool.MouseMove(X, Y: Integer; Shift: TShiftState);
 var
-  i, j:  Integer;
-  A:     TVertexAnchor;
-  R:     HRGN;
+  i, j: Integer;
+  A: TVertexAnchor;
+  R: HRGN;
   CurrentState: TSelectionState = ssNone;
   P, SP: TPointF;
 begin
@@ -509,7 +509,7 @@ class procedure TSelectTool.MouseUp(X, Y: Integer; Shift: TShiftState);
 
 var
   i, j: Integer;
-  lcc:  TClass = nil;
+  lcc: TClass = nil;
 begin
   if (MovementState = msMoved) and (SelectState <> ssNone) then
     ChangeEvent(True);
@@ -577,7 +577,7 @@ end;
 class procedure TRoundRectTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TRoundRect.Create;
   inherited CreateFigure;
   TRoundProperty.SetDefaultProperties(FiguresList);
@@ -622,14 +622,14 @@ begin
   begin
     Offset.x += trunc(X - DeltaX);
     Offset.y += trunc(Y - DeltaY);
-    DeltaX   := X;
-    DeltaY   := Y;
+    DeltaX := X;
+    DeltaY := Y;
   end;
 end;
 
 class procedure TDragTool.MouseUp(X, Y: Integer; Shift: TShiftState);
 begin
-  BMouseDown    := False;
+  BMouseDown := False;
   Screen.Cursor := crDefault;
 end;
 
@@ -667,7 +667,7 @@ end;
 class procedure TEllipseTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TEllipse.Create;
   inherited CreateFigure;
 end;
@@ -708,7 +708,7 @@ end;
 class procedure TRectangleTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TRectangle.Create;
   inherited CreateFigure;
   TRoundProperty.SetDefaultProperties(FiguresList);
@@ -751,9 +751,9 @@ end;
 class procedure TPolygonTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TPolygon.Create;
-  FigureClosed   := False;
+  FigureClosed := False;
   inherited CreateFigure;
 end;
 
@@ -850,9 +850,9 @@ end;
 class procedure TPolylineTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TPolyline.Create;
-  FigureClosed   := False;
+  FigureClosed := False;
   inherited CreateFigure;
 end;
 
@@ -890,7 +890,7 @@ end;
 class procedure TLineTool.CreateFigure;
 begin
   SetLength(FiguresList, Length(FiguresList) + 1);
-  CurrentFigure  := @FiguresList[High(FiguresList)];
+  CurrentFigure := @FiguresList[High(FiguresList)];
   CurrentFigure^ := TLine.Create;
   inherited CreateFigure;
 end;

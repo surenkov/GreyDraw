@@ -23,9 +23,9 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Control = PropsPanel
     AnchorSideBottom.Control = ColorsPanel
     Left = 89
-    Height = 580
+    Height = 560
     Top = 48
-    Width = 919
+    Width = 897
     Align = alCustom
     Anchors = [akTop, akLeft, akRight, akBottom]
     OnMouseDown = ViewPortMouseDown
@@ -40,9 +40,9 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = HScrollBar
     AnchorSideBottom.Side = asrBottom
-    Left = 987
+    Left = 986
     Height = 20
-    Top = 607
+    Top = 609
     Width = 20
     Anchors = [akRight, akBottom]
     BevelOuter = bvNone
@@ -50,22 +50,19 @@ object GreyDrawForm: TGreyDrawForm
   end
   object HScrollBar: TScrollBar
     AnchorSideLeft.Control = ViewPort
+    AnchorSideTop.Control = ViewPort
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = ViewPort
     AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = ViewPort
     AnchorSideBottom.Side = asrBottom
-    Left = 90
+    Left = 89
     Height = 21
-    Top = 606
-    Width = 898
-    Anchors = [akLeft, akRight, akBottom]
-    BorderSpacing.Left = 1
-    BorderSpacing.Right = 20
-    BorderSpacing.Bottom = 1
+    Top = 608
+    Width = 897
+    Anchors = [akTop, akLeft, akRight]
     PageSize = 100
     TabOrder = 4
-    OnScroll = HScrollBarScroll
+    OnChange = HScrollBarChange
   end
   object PropsPanel: TPanel
     AnchorSideLeft.Side = asrBottom
@@ -75,11 +72,13 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
-    Left = 1008
+    Left = 1006
     Height = 671
     Top = 48
     Width = 254
     Anchors = [akTop, akRight, akBottom]
+    BorderSpacing.Left = 20
+    BorderSpacing.Right = 2
     BevelOuter = bvNone
     BorderStyle = bsSingle
     ClientHeight = 667
@@ -1065,18 +1064,19 @@ object GreyDrawForm: TGreyDrawForm
     Left = 89
     Height = 91
     Top = 628
-    Width = 918
+    Width = 917
     Anchors = [akLeft, akRight, akBottom]
+    BorderSpacing.Top = 20
     BevelOuter = bvNone
     BorderStyle = bsSingle
     ClientHeight = 87
-    ClientWidth = 914
+    ClientWidth = 913
     TabOrder = 3
     object Palette: TDrawGrid
       Left = -3
       Height = 92
       Top = -3
-      Width = 919
+      Width = 918
       Anchors = [akTop, akLeft, akRight, akBottom]
       AutoAdvance = aaNone
       AutoEdit = False
@@ -1163,7 +1163,7 @@ object GreyDrawForm: TGreyDrawForm
         14
         14
         14
-        37
+        36
       )
     end
   end
@@ -1252,25 +1252,22 @@ object GreyDrawForm: TGreyDrawForm
     end
   end
   object VScrollBar: TScrollBar
+    AnchorSideLeft.Control = ViewPort
     AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Control = ViewPort
-    AnchorSideRight.Control = ViewPort
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = ViewPort
     AnchorSideBottom.Side = asrBottom
     Left = 986
-    Height = 559
-    Top = 49
-    Width = 21
-    Anchors = [akTop, akRight, akBottom]
-    BorderSpacing.Top = 1
-    BorderSpacing.Right = 1
-    BorderSpacing.Bottom = 20
+    Height = 560
+    Top = 48
+    Width = 20
+    Anchors = [akTop, akLeft, akBottom]
     Kind = sbVertical
     LargeChange = 10
     PageSize = 100
     TabOrder = 5
-    OnScroll = VScrollBarScroll
+    OnChange = VScrollBarChange
   end
   object MainMenu1: TMainMenu
     left = 32

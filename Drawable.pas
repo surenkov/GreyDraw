@@ -95,10 +95,10 @@ type
 
   TPenFigure = class(TFigure)
   private
-    FPenColor:   TBGRAPixel;
+    FPenColor: TBGRAPixel;
     FPenOpacity: Byte;
-    FPenStyle:   TPenStyle;
-    FPenSize:    Single;
+    FPenStyle: TPenStyle;
+    FPenSize: Single;
     procedure SetPenColor(AColor: TColor);
     function GetPenColor: TColor;
     procedure SetPenOpacity(AByte: Byte);
@@ -137,11 +137,11 @@ type
 
   TTextFigure = class(TPenFigure)
   private
-    FText:      String;
-    FHAlign:    TAlignment;
-    FVAlign:    TTextLayout;
+    FText: String;
+    FHAlign: TAlignment;
+    FVAlign: TTextLayout;
     FFontStyle: TFontStyles;
-    FFontName:  String;
+    FFontName: String;
     FFontHeight: Integer;
   public
     procedure Draw(var ACanvas: TBGRABitmap); override;
@@ -267,7 +267,9 @@ type
   end;
 
 function BoundingRect(A, B: TRectF): TRectF;
+function BoundingRect(AInit: TRectF): TRectF;
 function BoundingRect: TRectF;
+function ScrollRect(AInit: TRectF): TRectF;
 function ScrollRect: TRectF;
 
 const
@@ -275,19 +277,19 @@ const
   DeltaOffset: float = 2;
 
 var
-  Closed:      Boolean;
+  Closed: Boolean;
   FiguresList: TFigureList;
   AnchorsList: TCollection;
   CurrentFigure: PFigure;
   CurrentAnchor: PVertexAnchor;
-  BMouseDown:  Boolean;
+  BMouseDown: Boolean;
 
 implementation
 
 var
-  Texture:   TBGRABitmap;
+  Texture: TBGRABitmap;
   JustTimer: TTimer;
-  Delta:     Integer = 0;
+  Delta: Integer = 0;
   BoundaryOffset: Integer = 0;
 
 
@@ -319,8 +321,8 @@ end;
 procedure TSprayFigure.Draw(var ACanvas: TBGRABitmap);
 var
   i, j, s: Integer;
-  PL:   TPointFList;
-  P:    TPointF;
+  PL: TPointFList;
+  P: TPointF;
   f, r: float;
 begin
   s := FSeed;
@@ -329,8 +331,8 @@ begin
   for i := 0 to High(PL) do
     for j := 0 to FIntensity do
     begin
-      f   := rand(-100, 100, s);
-      r   := rand(FRadius, s);
+      f := rand(-100, 100, s);
+      r := rand(FRadius, s);
       P.x := PL[i].x + cos(f) * r * Scaling;
       P.y := PL[i].y + sin(f) * r * Scaling;
       ACanvas.DrawLineAntialias(P.x, P.y, P.x, P.y, FPenColor, 2 * FPenSize * Scaling);
@@ -348,7 +350,7 @@ function TSprayFigure.Region: HRGN;
 var
   R: TRect;
 begin
-  R      := Self.Rect;
+  R := Self.Rect;
   Result := CreateRectRgn(R.Left, R.Top, R.Right, R.Bottom);
 end;
 
@@ -360,9 +362,9 @@ begin
   i := FRadius * Scaling;
   with Result do
   begin
-    Left   -= i;
-    Top    -= i;
-    Right  += i;
+    Left -= i;
+    Top -= i;
+    Right += i;
     Bottom += i;
   end;
 end;
@@ -372,9 +374,9 @@ begin
   Result := inherited WorldRect;
   with Result do
   begin
-    Left   -= FRadius;
-    Top    -= FRadius;
-    Right  += FRadius;
+    Left -= FRadius;
+    Top -= FRadius;
+    Right += FRadius;
     Bottom += FRadius;
   end;
 end;
@@ -410,8 +412,8 @@ function TVertexAnchor.IsSelected(X, Y: Integer): Boolean;
 var
   P: TPoint;
 begin
-  P.x    := X;
-  P.y    := Y;
+  P.x := X;
+  P.y := Y;
   Result := Self.IsSelected(P);
 end;
 
@@ -419,7 +421,7 @@ function TVertexAnchor.IsSelected(APoint: TPoint): Boolean;
 var
   P: TPointF;
 begin
-  P      := WorldToScreen(FPoint^);
+  P := WorldToScreen(FPoint^);
   Result :=
     (abs(APoint.x - P.x) < DeltaOffset * 2) and
     (abs(APoint.y - P.y) < DeltaOffset * 2);
@@ -472,14 +474,14 @@ begin
     (Fpoints[1].y - FPoints[0].y) * (Fpoints[1].y - FPoints[0].y));
   if r = 0 then
     exit;
-  P      := WorldToScreen(Self.CreatePoints);
+  P := WorldToScreen(Self.CreatePoints);
   Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
-    Result.Top    := Min(Rect.Top, P[i].y);
-    Result.Left   := Min(Rect.Left, P[i].x);
+    Result.Top := Min(Rect.Top, P[i].y);
+    Result.Left := Min(Rect.Left, P[i].x);
     Result.Bottom := Max(Rect.Bottom, P[i].y);
-    Result.Right  := Max(Rect.Right, P[i].x);
+    Result.Right := Max(Rect.Right, P[i].x);
   end;
 end;
 
@@ -534,9 +536,9 @@ var
 begin
   SetLength(Result, FVertexes);
   Result[0] := FPoints[1];
-  x     := FPoints[1].x - FPoints[0].x;
-  y     := Fpoints[1].y - FPoints[0].y;
-  r     := sqrt(x * x + y * y);
+  x := FPoints[1].x - FPoints[0].x;
+  y := Fpoints[1].y - FPoints[0].y;
+  r := sqrt(x * x + y * y);
   angle := arctan2(y, x);
   for i := 1 to FVertexes - 1 do
   begin
@@ -550,7 +552,7 @@ end;
 
 procedure TTextFigure.Draw(var ACanvas: TBGRABitmap);
 var
-  R:  TRect;
+  R: TRect;
   TS: TTextStyle;
 begin
   inherited Draw(ACanvas);
@@ -592,7 +594,7 @@ begin
   inherited Clear;
   FPenStyle := psSolid;
   FPenColor := BGRABlack;
-  FPenSize  := 1;
+  FPenSize := 1;
 end;
 
 procedure TPenFigure.Draw(var ACanvas: TBGRABitmap);
@@ -606,7 +608,7 @@ var
   R: TRect;
 begin
   SetLength(T, 2);
-  R    := Rect;
+  R := Rect;
   T[0] := Point(R.Left, R.Top);
   T[1] := Point(R.Right, R.Bottom);
   DrawBoundLines(T[0], T[1], Point(T[1].x, T[0].y), Point(T[0].x, T[1].y), ACanvas);
@@ -648,7 +650,7 @@ function TRoundRect.Region: HRGN;
 var
   P: TPointList;
 begin
-  P      := round(WorldToScreen(FPoints));
+  P := round(WorldToScreen(FPoints));
   Result := CreateRoundRectRgn(P[0].x, P[0].y, P[1].x, P[1].y,
     round(FRX * 2 * Scaling), round(2 * FRY * Scaling));
   ;
@@ -701,7 +703,7 @@ var
   P: TPointFList;
   i: Integer;
 begin
-  P      := WorldToScreen(FPoints);
+  P := WorldToScreen(FPoints);
   Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
@@ -844,7 +846,7 @@ begin
     raise Exception.Create('GUID creation failed')
   else
     Result := GUIDToString(AGUID);
-  Result   := Copy(Result, 2, Length(Result) - 2);
+  Result := Copy(Result, 2, Length(Result) - 2);
 end;
 
 { TPolyline }
@@ -873,9 +875,9 @@ end;
 
 function TPolyline.Region: HRGN;
 var
-  P:  TPointList;
+  P: TPointList;
   P1: TPointFList;
-  i:  Integer;
+  i: Integer;
 begin
   SetLength(P, Length(FPoints) * 2);
   SetLength(P1, Length(FPoints));
@@ -905,7 +907,7 @@ end;
 procedure TLine.DrawSelection(var ACanvas: TBGRABitmap);
 var
   i, j: Integer;
-  P:    TPointList;
+  P: TPointList;
 begin
   inherited DrawSelection(ACanvas);
   P := round(WorldToScreen(FPoints));
@@ -915,12 +917,12 @@ end;
 
 function TLine.Region: HRGN;
 var
-  P:  TPointList;
+  P: TPointList;
   P1: TPointFList;
 begin
   SetLength(P, 4);
   SetLength(P1, 2);
-  P1     := WorldToScreen(FPoints);
+  P1 := WorldToScreen(FPoints);
   P[0].x := round(P1[0].x - 4 * DeltaOffset * Scaling);
   P[0].y := round(P1[0].y - 4 * DeltaOffset * Scaling);
   P[1].x := round(P1[0].x + 4 * DeltaOffset * Scaling);
@@ -959,10 +961,10 @@ end;
 
 function TBezier.Region: HRGN;
 var
-  P:    TPointList;
-  P1:   TPointFList;
+  P: TPointList;
+  P1: TPointFList;
   cnvs: TBGRABitmap;
-  i:    Integer;
+  i: Integer;
 begin
   cnvs := TBGRABitmap.Create;
   try
@@ -983,9 +985,9 @@ end;
 
 function TBezier.Rect: TRectF;
 var
-  P:    TPointFList;
+  P: TPointFList;
   cnvs: TBGRABitmap;
-  i:    Integer;
+  i: Integer;
 begin
   cnvs := TBGRABitmap.Create;
   try
@@ -995,17 +997,17 @@ begin
   end;
   with Result do
   begin
-    Top    := P[0].y;
-    Left   := P[0].x;
+    Top := P[0].y;
+    Left := P[0].x;
     Bottom := P[0].y;
-    Right  := P[0].x;
+    Right := P[0].x;
   end;
   for i := 0 to High(P) do
   begin
-    Result.Top    := Min(Rect.Top, P[i].y);
-    Result.Left   := Min(Rect.Left, P[i].x);
+    Result.Top := Min(Rect.Top, P[i].y);
+    Result.Left := Min(Rect.Left, P[i].x);
     Result.Bottom := Max(Rect.Bottom, P[i].y);
-    Result.Right  := Max(Rect.Right, P[i].x);
+    Result.Right := Max(Rect.Right, P[i].x);
   end;
 end;
 
@@ -1023,10 +1025,10 @@ begin
   Result := RectF(P[0].x, P[0].y, P[0].x, P[0].y);
   for i := 0 to High(P) do
   begin
-    Result.Top    := Min(Rect.Top, P[i].y);
-    Result.Left   := Min(Rect.Left, P[i].x);
+    Result.Top := Min(Rect.Top, P[i].y);
+    Result.Left := Min(Rect.Left, P[i].x);
     Result.Bottom := Max(Rect.Bottom, P[i].y);
-    Result.Right  := Max(Rect.Right, P[i].x);
+    Result.Right := Max(Rect.Right, P[i].x);
   end;
 end;
 
@@ -1062,7 +1064,7 @@ function TPolygon.Region: HRGN;
 var
   P: TPointList;
 begin
-  P      := round(WorldToScreen(FPoints));
+  P := round(WorldToScreen(FPoints));
   Result := CreatePolygonRgn(@P[0], Length(P), WINDING);
 end;
 
@@ -1075,10 +1077,10 @@ begin
   P := WorldToScreen(FPoints);
   with Result do
   begin
-    Top    := min(P[0].y - abs(P[0].y - P[1].y), P[0].y);
-    Left   := min(P[0].x - abs(P[0].x - P[1].x), P[0].x);
+    Top := min(P[0].y - abs(P[0].y - P[1].y), P[0].y);
+    Left := min(P[0].x - abs(P[0].x - P[1].x), P[0].x);
     Bottom := max(P[0].y - abs(P[0].y - P[1].y), P[0].y);
-    Right  := max(P[0].x - abs(P[0].x - P[1].x), P[0].x);
+    Right := max(P[0].x - abs(P[0].x - P[1].x), P[0].x);
   end;
 end;
 
@@ -1086,10 +1088,10 @@ function TEllipse.WorldRect: TRectF;
 begin
   with Result do
   begin
-    Top    := min(FPoints[0].y - abs(FPoints[0].y - FPoints[1].y), FPoints[0].y);
-    Left   := min(FPoints[0].x - abs(FPoints[0].x - FPoints[1].x), FPoints[0].x);
+    Top := min(FPoints[0].y - abs(FPoints[0].y - FPoints[1].y), FPoints[0].y);
+    Left := min(FPoints[0].x - abs(FPoints[0].x - FPoints[1].x), FPoints[0].x);
     Bottom := max(FPoints[0].y - abs(FPoints[0].y - FPoints[1].y), FPoints[1].y);
-    Right  := max(FPoints[0].x - abs(FPoints[0].x - FPoints[1].x), FPoints[1].x);
+    Right := max(FPoints[0].x - abs(FPoints[0].x - FPoints[1].x), FPoints[1].x);
   end;
 end;
 
@@ -1130,7 +1132,7 @@ function TEllipse.Region: HRGN;
 var
   P: TPointList;
 begin
-  P      := round(WorldToScreen(FPoints));
+  P := round(WorldToScreen(FPoints));
   Result := CreateEllipticRgn(P[0].x + Sign(P[0].x - P[1].x) *
     abs(P[0].x - P[1].x), P[0].y + Sign(P[0].y - P[1].y) * abs(P[0].y - P[1].y),
     P[1].x, P[1].y);
@@ -1166,7 +1168,7 @@ function TRectangle.Region: HRGN;
 var
   P: TPointList;
 begin
-  P      := round(WorldToScreen(FPoints));
+  P := round(WorldToScreen(FPoints));
   Result := CreateRectRgn(P[0].x, P[0].y, P[1].x, P[1].y);
 end;
 
@@ -1221,6 +1223,15 @@ begin
   JustTimer.Enabled := True;
 end;
 
+function BoundingRect(AInit: TRectF): TRectF;
+var
+  F: TFigure;
+begin
+  Result := AInit;
+  for F in FiguresList do
+    Result := BoundingRect(Result, F.WorldRect);
+end;
+
 function BoundingRect: TRectF;
 var
   F: TFigure;
@@ -1239,10 +1250,25 @@ begin
     Max(A.Bottom, B.Bottom));
 end;
 
+function ScrollRect(AInit: TRectF): TRectF;
+var
+  F: TFigure;
+  Rect: TRectF;
+  Stroke: Single = 0;
+begin
+  Result := AInit;
+  for F in FiguresList do
+  begin
+    if IsPublishedProp(F, 'PenSize') and GetPropValue(F, 'PenSize') > Stroke * 2 then
+      Stroke := GetPropValue(F, 'PenSize') / 2;
+    Result := BoundingRect(Result, F.Rect);
+  end;
+end;
+
 function ScrollRect: TRectF;
 var
-  F:      TFigure;
-  Rect:   TRectF;
+  F: TFigure;
+  Rect: TRectF;
   Stroke: Single = 0;
 begin
   if Length(FiguresList) > 0 then
@@ -1253,7 +1279,7 @@ begin
   begin
     if IsPublishedProp(F, 'PenSize') and GetPropValue(F, 'PenSize') > Stroke * 2 then
       Stroke := GetPropValue(F, 'PenSize') / 2;
-    Result   := BoundingRect(Result, F.Rect);
+    Result := BoundingRect(Result, F.Rect);
   end;
 end;
 
