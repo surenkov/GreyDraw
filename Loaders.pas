@@ -5,7 +5,7 @@ unit Loaders;
 interface
 
 uses
-  Classes, SysUtils, Drawable, typinfo, fpjson, fpjsonrtti, jsonparser, Dialogs, History;
+  Classes, SysUtils, Drawable, typinfo, fpjson, fpjsonrtti, jsonparser, Dialogs, History, Utils;
 
 type
   TStringLoader = function(ASerialized: String): TFigure;
@@ -34,10 +34,6 @@ procedure CryoDrawLoadFromFile(var AFileName: String);
 procedure CryoDrawSaveToFile(var AFileName: String);
 function CryoDrawLoadFromString(ASerialized: String): TFigure;
 function CryoDrawSaveToString(ADeserialized: TFigure): String;
-
-const
-  CurrentGDFSign    = 'GDFImage';
-  CurrentGDFVersion = '0.0.1';
 
 var
   FileName:    String;

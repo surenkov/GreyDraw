@@ -21,8 +21,8 @@ var
 implementation
 
 var
-  HI: Integer = 0;
-  HJ: Integer = 0;
+  HI: Cardinal = 0;
+  HJ: Cardinal = 0;
 
 procedure HistoryClear;
 begin

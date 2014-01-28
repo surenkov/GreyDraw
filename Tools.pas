@@ -916,6 +916,7 @@ class procedure TTool.MouseDown(X, Y: Integer; Shift: TShiftState);
 var
   i: Integer;
 begin
+  AnchorsList.Clear;
   DeltaP := ScreenToWorld(X, Y);
   for i := High(FiguresList) downto 0 do
     FiguresList[i].Selected := @FiguresList[i] = CurrentFigure;

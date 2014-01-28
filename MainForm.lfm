@@ -1,7 +1,7 @@
 object GreyDrawForm: TGreyDrawForm
-  Left = 130
-  Height = 735
-  Top = 102
+  Left = 156
+  Height = 744
+  Top = 193
   Width = 1262
   Caption = 'Untitled* – GreyDraw'
   ClientHeight = 0
@@ -14,7 +14,7 @@ object GreyDrawForm: TGreyDrawForm
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   Position = poScreenCenter
-  LCLVersion = '1.2.0.1'
+  LCLVersion = '1.2.0.2'
   WindowState = wsMaximized
   object ViewPort: TPaintBox
     AnchorSideLeft.Control = ToolsPanel
@@ -23,7 +23,7 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Control = PropsPanel
     AnchorSideBottom.Control = ColorsPanel
     Left = 89
-    Height = 571
+    Height = 580
     Top = 48
     Width = 919
     Align = alCustom
@@ -40,9 +40,9 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = HScrollBar
     AnchorSideBottom.Side = asrBottom
-    Left = 988
+    Left = 987
     Height = 20
-    Top = 599
+    Top = 607
     Width = 20
     Anchors = [akRight, akBottom]
     BevelOuter = bvNone
@@ -55,12 +55,14 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = ViewPort
     AnchorSideBottom.Side = asrBottom
-    Left = 89
+    Left = 90
     Height = 21
-    Top = 598
-    Width = 899
+    Top = 606
+    Width = 898
     Anchors = [akLeft, akRight, akBottom]
+    BorderSpacing.Left = 1
     BorderSpacing.Right = 20
+    BorderSpacing.Bottom = 1
     PageSize = 100
     TabOrder = 4
     OnScroll = HScrollBarScroll
@@ -74,13 +76,13 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 1008
-    Height = 662
+    Height = 671
     Top = 48
     Width = 254
     Anchors = [akTop, akRight, akBottom]
     BevelOuter = bvNone
     BorderStyle = bsSingle
-    ClientHeight = 658
+    ClientHeight = 667
     ClientWidth = 250
     TabOrder = 2
     object PropPanel: TPanel
@@ -89,18 +91,14 @@ object GreyDrawForm: TGreyDrawForm
       AnchorSideTop.Control = PropsPanel
       AnchorSideRight.Control = PropsPanel
       AnchorSideRight.Side = asrCenter
+      AnchorSideBottom.Control = PropsPanel
       AnchorSideBottom.Side = asrBottom
-      Left = 10
-      Height = 238
-      Top = 10
-      Width = 230
+      Left = -2
+      Height = 440
+      Top = 0
+      Width = 254
       Anchors = [akTop, akLeft, akRight]
-      BorderSpacing.Left = 10
-      BorderSpacing.Top = 10
-      BorderSpacing.Right = 10
-      BevelInner = bvSpace
-      BevelOuter = bvSpace
-      BorderStyle = bsSingle
+      BevelOuter = bvNone
       TabOrder = 0
     end
   end
@@ -114,6 +112,7 @@ object GreyDrawForm: TGreyDrawForm
     Top = 0
     Width = 1262
     Anchors = [akTop, akLeft, akRight]
+    BevelInner = bvSpace
     BevelOuter = bvNone
     BorderStyle = bsSingle
     ClientHeight = 44
@@ -1065,19 +1064,19 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideBottom.Side = asrBottom
     Left = 89
     Height = 91
-    Top = 619
-    Width = 919
+    Top = 628
+    Width = 918
     Anchors = [akLeft, akRight, akBottom]
     BevelOuter = bvNone
     BorderStyle = bsSingle
     ClientHeight = 87
-    ClientWidth = 915
+    ClientWidth = 914
     TabOrder = 3
     object Palette: TDrawGrid
       Left = -3
       Height = 92
       Top = -3
-      Width = 920
+      Width = 919
       Anchors = [akTop, akLeft, akRight, akBottom]
       AutoAdvance = aaNone
       AutoEdit = False
@@ -1164,7 +1163,7 @@ object GreyDrawForm: TGreyDrawForm
         14
         14
         14
-        38
+        37
       )
     end
   end
@@ -1175,20 +1174,20 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 662
+    Height = 671
     Top = 48
     Width = 89
     Anchors = [akTop, akLeft, akBottom]
     BevelOuter = bvNone
     BorderStyle = bsSingle
-    ClientHeight = 658
+    ClientHeight = 667
     ClientWidth = 85
     TabOrder = 1
     object PenColorPanel: TPanel
       Left = 25
       Height = 50
       Hint = 'Цвет контура'
-      Top = 594
+      Top = 603
       Width = 50
       Anchors = [akBottom]
       BevelOuter = bvNone
@@ -1208,7 +1207,7 @@ object GreyDrawForm: TGreyDrawForm
       Left = 8
       Height = 50
       Hint = 'Цает заливки'
-      Top = 577
+      Top = 586
       Width = 50
       Anchors = [akRight, akBottom]
       BorderSpacing.Right = 17
@@ -1230,7 +1229,7 @@ object GreyDrawForm: TGreyDrawForm
       Left = 8
       Height = 15
       Hint = 'Прозрачная заливка'
-      Top = 629
+      Top = 638
       Width = 15
       Anchors = [akLeft, akBottom]
       ParentShowHint = False
@@ -1244,7 +1243,7 @@ object GreyDrawForm: TGreyDrawForm
       Left = 60
       Height = 15
       Hint = 'Прозрачный контур'
-      Top = 577
+      Top = 586
       Width = 15
       Anchors = [akTop, akRight]
       ParentShowHint = False
@@ -1259,11 +1258,13 @@ object GreyDrawForm: TGreyDrawForm
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = ViewPort
     AnchorSideBottom.Side = asrBottom
-    Left = 987
-    Height = 551
-    Top = 48
+    Left = 986
+    Height = 559
+    Top = 49
     Width = 21
     Anchors = [akTop, akRight, akBottom]
+    BorderSpacing.Top = 1
+    BorderSpacing.Right = 1
     BorderSpacing.Bottom = 20
     Kind = sbVertical
     LargeChange = 10
@@ -1463,6 +1464,14 @@ object GreyDrawForm: TGreyDrawForm
         Caption = 'Redo'
         ShortCut = 24666
         OnClick = RedoActionClick
+      end
+      object MenuItem2: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem3: TMenuItem
+        Caption = 'Select All'
+        ShortCut = 16449
+        OnClick = MenuItem3Click
       end
       object Sep2: TMenuItem
         Caption = '-'
@@ -1685,7 +1694,6 @@ object GreyDrawForm: TGreyDrawForm
   end
   object ExportDalog: TSaveDialog
     FileName = 'Untitled.bmp'
-    Filter = 'Windows Bitmap|*.bmp|Portable Network Graphics|*.png|JPEG Image|*.jpg|Scalable Vector Graphics|*.svg'
     left = 32
     top = 296
   end

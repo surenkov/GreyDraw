@@ -50,6 +50,11 @@ const
   MinScaleSize = 0.001;
   MaxScaleSize = 68;
 
+  GDEName = 'GreyDraw Editor';
+  GDEVersion = '0.0.6';
+  CurrentGDFSign    = 'GDFImage';
+  CurrentGDFVersion = '0.0.1';
+
 var
   Offset, CursorPos: TOffset;
   ViewPortCenter: TPointF;

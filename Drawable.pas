@@ -106,6 +106,7 @@ type
   public
     procedure Clear; override;
     procedure Draw(var ACanvas: TBGRABitmap); override;
+    procedure DrawSelection(var ACanvas: TBGRABitmap); override;
   published
     property PenColor: TColor read GetPenColor write SetPenColor;
     property PenStyle: TPenStyle read FPenStyle write FPenStyle;
@@ -248,7 +249,8 @@ type
     procedure Draw(var ACanvas: TBGRABitmap); override;
     procedure DrawSelection(var ACanvas: TBGRABitmap); override;
     function Region: HRGN; override;
-    //function PointsCount: Integer; override;
+    function Rect: TRectF; override;
+    function WorldRect: TRectF; override;
   published
     property Seed: Integer read FSeed write FSeed;
     property Intensity: Integer read FIntensity write FIntensity;
@@ -264,8 +266,9 @@ type
     class procedure Init;
   end;
 
-function BoundingRect(AFigures: TFigureList; Screen: Boolean = True): TRectF;
 function BoundingRect(A, B: TRectF): TRectF;
+function BoundingRect: TRectF;
+function ScrollRect: TRectF;
 
 const
   SelectedColor: TBGRAPixel = (blue: 0; green: 100; red: 255; alpha: 255);
@@ -285,6 +288,31 @@ var
   Texture:   TBGRABitmap;
   JustTimer: TTimer;
   Delta:     Integer = 0;
+  BoundaryOffset: Integer = 0;
+
+
+procedure DrawBoundLines(AStart1, AStart2, AFinish1, AFinish2: TPoint;
+  ACanvas: TBGRABitmap);
+begin
+  while AStart1.x + 5 + BoundaryOffset < AFinish1.x do
+  begin
+    ACanvas.DrawHorizLine(AStart1.x + BoundaryOffset, AStart1.y,
+      AStart1.x + BoundaryOffset + 5, SelectedColor);
+    AStart1.x += 10;
+    ACanvas.DrawHorizLine(AStart2.x - BoundaryOffset, AStart2.y,
+      AStart2.x - BoundaryOffset - 5, SelectedColor);
+    AStart2.x -= 10;
+  end;
+  while AFinish1.y + 5 + BoundaryOffset < AStart2.y do
+  begin
+    ACanvas.DrawVertLine(AFinish1.x, AFinish1.y + BoundaryOffset,
+      AFinish1.y + BoundaryOffset + 5, SelectedColor);
+    AFinish1.y += 10;
+    ACanvas.DrawVertLine(AFinish2.x, AFinish2.y - BoundaryOffset,
+      AFinish2.y - BoundaryOffset - 5, SelectedColor);
+    AFinish2.y -= 10;
+  end;
+end;
 
 { TSprayFigure }
 
@@ -313,8 +341,7 @@ procedure TSprayFigure.DrawSelection(var ACanvas: TBGRABitmap);
 var
   R: TRect;
 begin
-  //R := Self.Rect;
-  //ACanvas.RectangleAntialias(R.Left, R.Top, R.Right, R.Bottom, SelectedColor, 1);
+  inherited DrawSelection(ACanvas);
 end;
 
 function TSprayFigure.Region: HRGN;
@@ -325,10 +352,32 @@ begin
   Result := CreateRectRgn(R.Left, R.Top, R.Right, R.Bottom);
 end;
 
- //function TSprayFigure.PointsCount: Integer;
- //begin
- //  Result := 0;
- //end;
+function TSprayFigure.Rect: TRectF;
+var
+  i: float;
+begin
+  Result := inherited Rect;
+  i := FRadius * Scaling;
+  with Result do
+  begin
+    Left   -= i;
+    Top    -= i;
+    Right  += i;
+    Bottom += i;
+  end;
+end;
+
+function TSprayFigure.WorldRect: TRectF;
+begin
+  Result := inherited WorldRect;
+  with Result do
+  begin
+    Left   -= FRadius;
+    Top    -= FRadius;
+    Right  += FRadius;
+    Bottom += FRadius;
+  end;
+end;
 
 { TVertexAnchor }
 
@@ -551,6 +600,18 @@ begin
   ACanvas.PenStyle := FPenStyle;
 end;
 
+procedure TPenFigure.DrawSelection(var ACanvas: TBGRABitmap);
+var
+  T: TPointList;
+  R: TRect;
+begin
+  SetLength(T, 2);
+  R    := Rect;
+  T[0] := Point(R.Left, R.Top);
+  T[1] := Point(R.Right, R.Bottom);
+  DrawBoundLines(T[0], T[1], Point(T[1].x, T[0].y), Point(T[0].x, T[1].y), ACanvas);
+end;
+
 { TRoundRect }
 
 procedure TRoundRect.Draw(var ACanvas: TBGRABitmap);
@@ -653,20 +714,10 @@ function TFigure.WorldRect: TRectF;
 var
   i: Integer;
 begin
-  with Result do
-  begin
-    Top    := FPoints[0].y;
-    Left   := FPoints[0].x;
-    Bottom := FPoints[0].y;
-    Right  := FPoints[0].x;
-  end;
+  Result := RectF(FPoints[0].x, FPoints[0].y, FPoints[1].x, FPoints[1].y);
   for i := 0 to High(FPoints) do
-  begin
-    Result.Top    := Min(Result.Top, FPoints[i].y);
-    Result.Left   := Min(Result.Left, FPoints[i].x);
-    Result.Bottom := Max(Result.Bottom, FPoints[i].y);
-    Result.Right  := Max(Result.Right, FPoints[i].x);
-  end;
+    Result := RectF(Min(Result.Left, FPoints[i].x), Min(Result.Top, FPoints[i].y),
+      Max(Result.Right, FPoints[i].x), Max(Result.Bottom, FPoints[i].y));
 end;
 
 procedure TFigure.AddPoint(X, Y: Integer; APos: Integer);
@@ -856,6 +907,7 @@ var
   i, j: Integer;
   P:    TPointList;
 begin
+  inherited DrawSelection(ACanvas);
   P := round(WorldToScreen(FPoints));
   ACanvas.PenStyle := psSolid;
   ACanvas.DrawLine(P[0].x, P[0].y, P[1].x, P[1].y, SelectedColor, True);
@@ -1157,7 +1209,7 @@ const
 
 class procedure TTimerInit.OnTimer(Sender: TObject);
 begin
-  Delta += Shift;
+  BoundaryOffset := (BoundaryOffset + 1) mod 10;
   ValidEvent;
 end;
 
@@ -1169,23 +1221,40 @@ begin
   JustTimer.Enabled := True;
 end;
 
-function BoundingRect(AFigures: TFigureList; Screen: Boolean): TRectF;
+function BoundingRect: TRectF;
 var
-  i: Integer;
+  F: TFigure;
 begin
-  try
-    Result := AFigures[0].Rect;
-    for i := 1 to High(AFigures) do
-      Result := BoundingRect(Result, AFigures[i].Rect);
-  except
+  if Length(FiguresList) > 0 then
+    Result := RectF(Infinity, Infinity, NegInfinity, NegInfinity)
+  else
     Result := RectF(0, 0, 0, 0);
-  end;
+  for F in FiguresList do
+    Result := BoundingRect(Result, F.WorldRect);
 end;
 
 function BoundingRect(A, B: TRectF): TRectF;
 begin
   Result := RectF(Min(A.Left, B.Left), Min(A.Top, B.Top), Max(A.Right, B.Right),
     Max(A.Bottom, B.Bottom));
+end;
+
+function ScrollRect: TRectF;
+var
+  F:      TFigure;
+  Rect:   TRectF;
+  Stroke: Single = 0;
+begin
+  if Length(FiguresList) > 0 then
+    Result := RectF(Infinity, Infinity, NegInfinity, NegInfinity)
+  else
+    Result := RectF(0, 0, 0, 0);
+  for F in FiguresList do
+  begin
+    if IsPublishedProp(F, 'PenSize') and GetPropValue(F, 'PenSize') > Stroke * 2 then
+      Stroke := GetPropValue(F, 'PenSize') / 2;
+    Result   := BoundingRect(Result, F.Rect);
+  end;
 end;
 
 initialization

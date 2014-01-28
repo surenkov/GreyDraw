@@ -33,7 +33,7 @@ implementation
 
 procedure TJPEGQualitySelector.TrackBar1Change(Sender: TObject);
 begin
-  Label1.Caption := Format('Степень сжатия: %d%%', [TTrackBar(Sender).Position]);
+  Label1.Caption := Format('Quality: %d%%', [TTrackBar(Sender).Position]);
 end;
 
 procedure TJPEGQualitySelector.FormClose(Sender: TObject;
